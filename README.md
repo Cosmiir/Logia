@@ -5,12 +5,12 @@
 # Logia
 
 **Track your media progression and organize your collections.**  
-Cataloguez et gérez vos films, séries, animes, mangas et jeux vidéo — 100% hors-ligne.
+Catalog and manage your movies, series, anime, manga, and video games — 100% offline.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/Cosmiir/logia?color=purple)](https://github.com/Cosmiir/logia/releases)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-blueviolet)](#installation)
-[![Ko-fi](https://img.shields.io/badge/Support-Ko--fi-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/cosmiir)
+[![Platform](https://img.shields.io/badge/platform-Windows-blueviolet)](#installation)
+[![Buy Me a Coffee](https://img.shields.io/badge/Support-Buy%20Me%20a%20Coffee-FFDD00?logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/cosmiir)
 
 ![Logia Dashboard](./screenshots/dashboard.png)
 
@@ -18,129 +18,135 @@ Cataloguez et gérez vos films, séries, animes, mangas et jeux vidéo — 100% 
 
 ---
 
-## À propos
+## About
 
-Logia est une application desktop **100% hors-ligne** pour suivre votre progression sur tous vos médias. Pas de compte, pas de cloud, pas d'API externe — vos données restent chez vous, dans une base SQLite locale.
+Logia is a **100% offline** desktop application for tracking your progression across all your media. No account, no cloud, no external API — your data stays on your machine, in a local SQLite database.
 
-Conçu pour les personnes qui consomment des médias variés (films, séries, animes, mangas, jeux vidéo) et veulent un seul endroit pour tout suivre, noter et analyser.
-
----
-
-## Fonctionnalités
-
-### 📚 Bibliothèque multi-collections
-- 5 collections : **Film**, **Série**, **Anime**, **Manga / Manhwa**, **Jeu Vidéo**
-- Statuts : À commencer, En cours, Terminé, Abandonné
-- Ajout 100% manuel — aucune dépendance à une API externe
-
-### 🔍 Recherche & Filtres
-- Recherche full-text (FTS5) sur le titre, le créateur et le synopsis/avis
-- Filtres avancés par statut, collection, note, date
-- Tri multi-critères
-- Deux vues : grille et liste
-
-### ✍️ Fiches détaillées
-- Synopsis et avis rédigés avec un éditeur Markdown ([Gravity UI](https://gravity-ui.com/))
-- Suivi de progression personnalisé (chapitres, épisodes, heures…)
-- Tags de genres
-- Système de notation sur 100
-- Médias similaires
-
-### 📊 Statistiques
-- Répartition par statut et par collection
-- Distribution des notes
-- Moyenne par collection
-- Mieux et moins bien notés
-- Filtres par collection et par période
-
-### 🎨 Personnalisation
-- 5 thèmes : Nebula, Midnight, Ember, Forest, Arctic
-- 3 densités d'affichage : Compact, Normal, Confortable
-- Style de boutons de fenêtre : Windows, macOS, Hybride
-- Animations d'interface activables/désactivables
-- Interface disponible en **Français** et **English**
-
-### 💾 Export des données
-- Export texte : **Markdown**, **CSV**, **TSV**
-- Export ZIP :
-  - Profil seul (collections, paramètres)
-  - Profil complet (avec images des médias)
-
-### ⚙️ Autres
-- Profils multiples avec base de données indépendante par profil
-- Protection par mot de passe par profil
-- Raccourcis clavier
-- Système de notifications intégré
-- Dossier de stockage configurable
+Built for people who consume varied media (movies, series, anime, manga, video games) and want a single place to track, rate, and analyze everything.
 
 ---
 
-## Captures d'écran
+## Features
 
-| Dashboard | Bibliothèque |
-|-----------|-------------|
+### 📚 Dynamic Collections
+- Create unlimited collections with custom names, icons, and colors
+- Each collection has configurable labels (creator, date, progression unit, etc.)
+- Fully user-driven — no predefined collections, you build your own library from scratch
+- 100% manual entry — no dependency on any external API
+
+### 📊 Dual Status System
+- **Progress status**: Not Started, In Progress, On Hold, Completed, Abandoned
+- **Media status**: Upcoming, Ongoing, Hiatus, Completed, Cancelled, Abandoned
+- Track both independently for granular organization
+
+### 🔍 Search & Filters
+- Full-text search (FTS5) across title, creator, and synopsis/review
+- Advanced filtering by status, collection, rating, and date
+- Multi-criteria sorting
+- Two view modes: grid and list
+
+### ✍️ Detailed Media Cards
+- Synopsis and review written with a Markdown editor ([Gravity UI](https://gravity-ui.com/))
+- Customizable progression tracking (chapters, episodes, hours, percent, etc.)
+- Genre tagging system
+- 100-point rating scale
+- Similar media detection based on shared genres
+
+### � Statistics
+- Breakdown by status and collection
+- Rating distribution
+- Per-collection averages
+- Best and worst rated media
+- Filters by collection and time period
+
+### 🎨 Personalization
+- 5 themes: Nebula, Midnight, Ember, Forest, Arctic
+- 4 card densities: Compact, Normal, Large, Detailed
+- Window button styles: Windows, macOS, Hybrid
+- Toggleable interface animations
+- Available in **English** and **French**
+
+### 💾 Data Export
+- Text export: **Markdown**, **CSV**, **TSV**
+- ZIP backup:
+  - Profile only (collections, settings)
+  - Full profile (including media images)
+
+### ⚙️ Other
+- Multiple profiles with independent databases per profile
+- Per-profile password protection
+- Keyboard shortcuts
+- Integrated notification system
+- Configurable storage directory
+
+---
+
+## Screenshots
+
+| Dashboard | Library |
+|-----------|---------|
 | ![Dashboard](./screenshots/dashboard.png) | ![Library](./screenshots/library.png) |
 
-| Fiche média | Statistiques |
-|-------------|-------------|
+| Media Detail | Statistics |
+|--------------|------------|
 | ![Media](./screenshots/media.png) | ![Stats](./screenshots/stats.png) |
 
-| Personnalisation | Paramètres |
-|-----------------|-----------|
+| Personalization | Settings |
+|-----------------|----------|
 | ![Theme](./screenshots/settings-theme.png) | ![Profile](./screenshots/settings-profile.png) |
 
 ---
 
 ## Installation
 
-### Téléchargement direct (recommandé)
+### Direct download (recommended)
 
-Rendez-vous sur la page [**Releases**](https://github.com/Cosmiir/logia/releases) et téléchargez l'installeur pour votre plateforme :
+Visit the [**Releases**](https://github.com/Cosmiir/logia/releases) page and download the installer for your platform:
 
-| Plateforme | Fichier |
-|------------|---------|
-| Windows | `Logia_x.x.x_x64-setup.exe` (NSIS) ou `Logia_x.x.x_x64_en-US.msi` |
-| macOS | *(non testé officiellement — Tauri supporte macOS)* |
-| Linux | *(non testé officiellement — Tauri supporte Linux)* |
+| Platform | File |
+|----------|------|
+| Windows | `Logia_x.x.x_x64-setup.exe` (NSIS) or `Logia_x.x.x_x64_en-US.msi` |
+| macOS | *(untested — Tauri supports macOS)* |
+| Linux | *(untested — Tauri supports Linux)* |
 
-### Depuis le code source
+### From source
 
-**Prérequis :**
+**Prerequisites:**
 - [Node.js](https://nodejs.org/) (v18+)
 - [Rust](https://www.rust-lang.org/tools/install) + [Tauri CLI](https://tauri.app/start/prerequisites/)
 
 ```bash
-# Cloner le repo
+# Clone the repo
 git clone https://github.com/Cosmiir/logia.git
 cd logia
 
-# Installer les dépendances
+# Install dependencies
 npm install
 
-# Lancer en développement
+# Run in development
 npm run tauri dev
 
-# Compiler une version de production
+# Build for production
 npm run tauri build
 ```
 
 ---
 
-## Stack technique
+## Tech Stack
 
-| Couche | Technologie |
-|--------|-------------|
+| Layer | Technology |
+|-------|------------|
 | Frontend | React 19 + TypeScript + TailwindCSS 4 |
 | Backend | Tauri 2.10 (Rust) |
-| Base de données | SQLite (WAL + FTS5) |
+| Database | SQLite (WAL + FTS5) |
 | State | Zustand 5 + TanStack Query 5 |
 | Animations | Framer Motion 11 |
 
 ---
 
-## Licence
+## License
 
-Distribué sous licence **MIT**. Voir [`LICENSE`](LICENSE) pour plus de détails.
+Distributed under the **MIT** License. See [`LICENSE`](LICENSE) for details.
 
 ```
 Copyright (c) 2026 Cosmiir
@@ -150,12 +156,12 @@ Copyright (c) 2026 Cosmiir
 
 ## Support
 
-Logia est gratuit et open source. Si le projet vous est utile et que vous souhaitez soutenir son développement :
+Logia is free and open source. If you find the project useful and want to support its development:
 
-[![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/cosmiir)
+[![Buy Me a Coffee](https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png)](https://buymeacoffee.com/cosmiir)
 
 ---
 
 <div align="center">
-  <sub>Construit avec passion — Open Source ❤️</sub>
+  <sub>Built with passion — Open Source ❤️</sub>
 </div>
