@@ -482,7 +482,7 @@ pub async fn import_from_csv(
 
         let now = chrono::Utc::now().to_rfc3339();
         conn.execute(
-            "INSERT INTO media (collection_id, title, creator, release_date, synopsis, user_rating, user_review, progressCurrent, progress_total, progress_status, replay_count, experience_date, positive_points, negative_points, media_status, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)",
+            "INSERT INTO media (collection_id, title, creator, release_date, synopsis, user_rating, user_review, progress_current, progress_total, progress_status, replay_count, experience_date, positive_points, negative_points, media_status, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)",
             [
                 collection_id.map(|i| i.to_string()),
                 Some(title),
