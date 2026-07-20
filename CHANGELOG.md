@@ -10,3 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - CSV import: fixed incorrect column name `progressCurrent` → `progress_current` in the INSERT query, which caused "table media has no column named progressCurrent" errors on every imported row
 - Images not loading in production build: fixed CSP `img-src` directive from `https://asset.localhost` to `http://asset.localhost` to match Tauri v2's asset protocol scheme on Windows
+- Media sort by "recently added" broken after CSV import: imported media used RFC 3339 timestamps (`2026-07-20T17:47:00+00:00`) while media created normally used SQLite format (`2026-07-20 17:47:00`). Since SQLite sorts DATETIME lexicographically, `T` (ASCII 84) > space (ASCII 32), causing all imported media to sort before manually created media regardless of actual date. Fixed by using SQLite-compatible timestamp format in CSV/profile imports.
+- CSP: added `blob:` to `img-src` directive to allow blob URL images to load
+
+### Changed
+- Fonts: replaced Google Fonts CDN (`fonts.googleapis.com`) with local `@fontsource/inter` package to eliminate external network dependency and improve offline reliability

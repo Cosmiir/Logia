@@ -278,5 +278,3 @@ fn create_schema(conn: &Connection) -> Result<()> {
 
     Ok(())
 }
-
-

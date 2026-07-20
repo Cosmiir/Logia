@@ -356,7 +356,7 @@ pub async fn import_from_csv(
                 if let Some(id) = col_id {
                     Some(id as i32)
                 } else if request.auto_create_collections {
-                    let now = chrono::Utc::now().to_rfc3339();
+                    let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
                     conn.execute(
                         "INSERT INTO collections (name, color, creator_label, date_label, progression_unit, progression_label, plural_with_s, position, created_at) VALUES (?1, '#6366f1', 'Créé par', 'Sorti le', 'unité', 'Progression', 0, 0, ?2)",
                         [col_name.as_str(), now.as_str()]
@@ -480,7 +480,7 @@ pub async fn import_from_csv(
         let user_review = get_column_value(&record, "user_review")
             .filter(|s| !s.trim().is_empty());
 
-        let now = chrono::Utc::now().to_rfc3339();
+        let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
         conn.execute(
             "INSERT INTO media (collection_id, title, creator, release_date, synopsis, user_rating, user_review, progress_current, progress_total, progress_status, replay_count, experience_date, positive_points, negative_points, media_status, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)",
             [
@@ -1103,7 +1103,10 @@ pub fn merge_databases(
                                     progress_current, progress_total, progress_status, replay_count, experience_date,
                                     created_at, updated_at, cover_source_index, positive_points,
                                     negative_points, media_status)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)",
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12,
+                         strftime('%Y-%m-%d %H:%M:%S', ?13),
+                         strftime('%Y-%m-%d %H:%M:%S', ?14),
+                         ?15, ?16, ?17, ?18)",
                 rusqlite::params![
                     dest_col_id, title, creator, release_date, synopsis, user_rating, user_review,
                     progress_current, progress_total, progress_status, replay_count, experience_date,
