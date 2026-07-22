@@ -5,6 +5,23 @@ All notable changes to Logia will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2026-07-22
+
+### Fixed
+- Database corruption prevention: added `PRAGMA wal_checkpoint(TRUNCATE)` on app exit via `RunEvent::ExitRequested` handler, ensuring WAL data is properly merged into the main database file before shutdown
+- `create_media` and `update_media`: wrapped all 3 operations (media insert/update + genre linking + credit linking) in a single atomic transaction instead of separate unchecked transactions, preventing partial writes if one step fails
+- `switch_profile`: lock file is now acquired for the new profile BEFORE updating the manifest, preventing an inconsistent state where the manifest says profile B is active but the connection is still on profile A
+- `switch_profile`: WAL checkpoint on the old connection before swapping to the new profile's database
+
+### Added
+- Lock file (`logia.db.lock`) using Windows `LockFile` API to prevent two instances of Logia from using the same profile database simultaneously. Lock is acquired at startup and on profile switch, with RAII cleanup on exit.
+- GFS (Grandfather-Father-Son) automatic database backup: creates a daily copy of `logia.db` in `backups/` on app startup and on profile switch. Rotation keeps 7 daily, 4 weekly, and 12 monthly backups, deleting older ones automatically.
+
+### Changed
+- `genres::link_to_media` and `people::link_to_media`: removed inner `unchecked_transaction` since callers (`create_media`/`update_media`) now wrap operations in a global transaction
+- Backup rotation: weekly grouping now uses `(year, week)` instead of `week` alone to avoid cross-year collisions
+- Backup rotation: monthly retention now uses calendar date comparison instead of `age_days <= 365` for precise 12-month retention
+
 ## [1.0.2] - 2026-07-22
 
 ### Fixed

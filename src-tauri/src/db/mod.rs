@@ -9,6 +9,7 @@ pub mod notifications;
 pub mod review_templates;
 pub mod people;
 pub mod experience_entries;
+pub mod backup;
 
 pub use init::initialize_database;
 

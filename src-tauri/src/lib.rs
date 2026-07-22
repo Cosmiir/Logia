@@ -5,9 +5,17 @@ mod utils;
 
 use std::sync::Mutex;
 use std::path::PathBuf;
+use std::fs::OpenOptions;
+use std::os::windows::io::AsRawHandle;
 use rusqlite::Connection;
 use tauri::Manager;
 use serde::{Deserialize, Serialize};
+use tauri::RunEvent;
+
+extern "C" {
+    fn LockFile(handle: *mut std::ffi::c_void, offset_low: u32, offset_high: u32, length_low: u32, length_high: u32) -> i32;
+    fn UnlockFile(handle: *mut std::ffi::c_void, offset_low: u32, offset_high: u32, length_low: u32, length_high: u32) -> i32;
+}
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct AppConfig {
@@ -27,6 +35,36 @@ pub struct AppState {
     pub app_dir: Mutex<PathBuf>,
     pub storage_dir: Mutex<PathBuf>,
     pub storage_missing: Mutex<bool>,
+    pub _db_lock: Mutex<Option<DbLock>>,
+}
+
+/// RAII guard for the database lock file. Releases the Windows file lock when dropped.
+pub struct DbLock {
+    _file: std::fs::File,
+}
+
+impl Drop for DbLock {
+    fn drop(&mut self) {
+        let handle = self._file.as_raw_handle() as *mut std::ffi::c_void;
+        unsafe { UnlockFile(handle, 0, 0, 1, 0); }
+    }
+}
+
+/// Try to acquire an exclusive lock on a .lock file next to the DB.
+/// Returns None if another instance already holds the lock.
+pub fn try_acquire_lock(lock_path: &PathBuf) -> Option<DbLock> {
+    let file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .open(lock_path)
+        .ok()?;
+    let handle = file.as_raw_handle() as *mut std::ffi::c_void;
+    let success = unsafe { LockFile(handle, 0, 0, 1, 0) };
+    if success != 0 {
+        Some(DbLock { _file: file })
+    } else {
+        None
+    }
 }
 
 /// Get the path to config.json in %AppData%
@@ -99,6 +137,7 @@ pub fn run() {
             };
             
             // Load (or create) the profiles manifest and get active profile (from storage_dir)
+            let mut db_lock: Option<DbLock> = None;
             let conn = if storage_missing {
                 // Storage inaccessible (disque débranché etc.) - use in-memory DB
                 let c = Connection::open_in_memory().expect("Failed to open in-memory DB");
@@ -118,7 +157,24 @@ pub fn run() {
                     c
                 } else {
                     let active_id = &manifest.active_profile_id;
-                    db::profiles::ensure_profile_dir(&storage_dir, active_id)
+                    let profile_dir = db::profiles::profile_dir(&storage_dir, active_id);
+                    
+                    // Try to acquire a lock file to prevent two instances from using the same DB
+                    let lock_path = profile_dir.join("logia.db.lock");
+                    db_lock = match try_acquire_lock(&lock_path) {
+                        Some(lock) => Some(lock),
+                        None => {
+                            eprintln!("Another instance of Logia is already using this database. Exiting.");
+                            std::process::exit(1);
+                        }
+                    };
+                    
+                    let conn = db::profiles::ensure_profile_dir(&storage_dir, active_id);
+                    
+                    // Create a GFS backup of the database
+                    db::backup::create_backup(&conn, &profile_dir);
+                    
+                    conn
                 }
             };
             
@@ -128,6 +184,7 @@ pub fn run() {
                 app_dir: Mutex::new(app_dir),
                 storage_dir: Mutex::new(storage_dir),
                 storage_missing: Mutex::new(storage_missing),
+                _db_lock: Mutex::new(db_lock),
             });
             
             Ok(())
@@ -226,6 +283,15 @@ pub fn run() {
             commands::review_templates::update_review_template,
             commands::review_templates::delete_review_template,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app_handle, event| {
+            if let RunEvent::ExitRequested { .. } = event {
+                if let Some(state) = app_handle.try_state::<AppState>() {
+                    if let Ok(conn) = state.db.lock() {
+                        let _ = conn.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);");
+                    }
+                }
+            }
+        });
 }

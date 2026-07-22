@@ -19,6 +19,7 @@ pub struct StorageInfo {
     pub total_size_bytes: u64,
     pub total_media: i32,
     pub total_images: i32,
+    pub total_attachments: i32,
 }
 
 #[derive(Debug, Serialize)]

@@ -630,19 +630,21 @@ pub async fn create_media(
         utils::validate_rating(rating)?;
     }
 
-    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    let mut conn = state.db.lock().map_err(|e| e.to_string())?;
     let genre_ids = dto.genre_ids.take();
     if let Some(ref ids) = genre_ids {
         utils::validate_media_genres(ids)?;
     }
     let credits = dto.credits.take();
-    let media_id = db::media::insert(&conn, dto).map_err(|e| e.to_string())?;
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+    let media_id = db::media::insert(&tx, dto).map_err(|e| e.to_string())?;
     if let Some(ids) = genre_ids {
-        db::genres::link_to_media(&conn, media_id, &ids).map_err(|e| e.to_string())?;
+        db::genres::link_to_media(&tx, media_id, &ids).map_err(|e| e.to_string())?;
     }
     if let Some(c) = credits {
-        db::people::link_to_media(&conn, media_id, &c).map_err(|e| e.to_string())?;
+        db::people::link_to_media(&tx, media_id, &c).map_err(|e| e.to_string())?;
     }
+    tx.commit().map_err(|e| e.to_string())?;
     Ok(media_id)
 }
 
@@ -756,20 +758,22 @@ pub async fn update_media(
         utils::validate_rating(rating)?;
     }
 
-    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    let mut conn = state.db.lock().map_err(|e| e.to_string())?;
     let media_id = dto.media_id;
     let genre_ids = dto.genre_ids.take();
     if let Some(ref ids) = genre_ids {
         utils::validate_media_genres(ids)?;
     }
     let credits = dto.credits.take();
-    db::media::update(&conn, dto).map_err(|e| e.to_string())?;
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+    db::media::update(&tx, dto).map_err(|e| e.to_string())?;
     if let Some(ids) = genre_ids {
-        db::genres::link_to_media(&conn, media_id, &ids).map_err(|e| e.to_string())?;
+        db::genres::link_to_media(&tx, media_id, &ids).map_err(|e| e.to_string())?;
     }
     if let Some(c) = credits {
-        db::people::link_to_media(&conn, media_id, &c).map_err(|e| e.to_string())?;
+        db::people::link_to_media(&tx, media_id, &c).map_err(|e| e.to_string())?;
     }
+    tx.commit().map_err(|e| e.to_string())?;
     Ok(())
 }
 

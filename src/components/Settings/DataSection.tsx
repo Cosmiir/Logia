@@ -190,8 +190,8 @@ const DataSection: React.FC = () => {
 
   const dbSize = storage?.db_size_bytes ?? 0;
   const imgSize = storage?.images_size_bytes ?? 0;
+  const attSize = storage?.attachments_size_bytes ?? 0;
   const totalSize = storage?.total_size_bytes ?? 0;
-  const storagePercent = totalSize > 0 ? Math.max(2, Math.min(100, Math.round((totalSize / (1024 * 1024 * 1024)) * 100))) : 0;
 
   return (
     <>
@@ -254,13 +254,7 @@ const DataSection: React.FC = () => {
                 <span className="text-sm text-white/70">{t('settings.data.totalSpaceUsed')}</span>
                 <span className="text-lg font-bold text-white">{formatBytes(totalSize)}</span>
               </div>
-              <div className="w-full bg-white/5 rounded-full h-3 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-primary to-flashy-blue transition-all duration-500 shadow-lg shadow-primary/25"
-                  style={{ width: `${storagePercent}%` }}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="bg-white/5 rounded-xl p-4 border border-white/10">
                   <p className="text-[10px] text-white/40 uppercase tracking-wider mb-1">{t('settings.data.database')}</p>
                   <p className="text-lg font-semibold text-white">{formatBytes(dbSize)}</p>
@@ -269,10 +263,15 @@ const DataSection: React.FC = () => {
                   <p className="text-[10px] text-white/40 uppercase tracking-wider mb-1">{t('settings.data.images')}</p>
                   <p className="text-lg font-semibold text-white">{formatBytes(imgSize)}</p>
                 </div>
+                <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                  <p className="text-[10px] text-white/40 uppercase tracking-wider mb-1">{t('settings.data.attachments')}</p>
+                  <p className="text-lg font-semibold text-white">{formatBytes(attSize)}</p>
+                </div>
               </div>
               <div className="flex justify-between text-xs text-white/30 px-1">
                 <span>{storage?.total_media ?? 0} {t('common.media')}</span>
                 <span>{storage?.total_images ?? 0} {t('common.image')}</span>
+                <span>{storage?.total_attachments ?? 0} {t('settings.data.attachments')}</span>
               </div>
             </div>
           </div>

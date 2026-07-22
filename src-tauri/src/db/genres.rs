@@ -128,9 +128,8 @@ pub fn get_by_media_ids(conn: &Connection, media_ids: &[i64]) -> Result<std::col
 }
 
 pub fn link_to_media(conn: &Connection, media_id: i64, genre_ids: &[i64]) -> Result<()> {
-    let tx = conn.unchecked_transaction()?;
-    tx.execute("DELETE FROM media_genres WHERE media_id = ?1", params![media_id])?;
-    let mut stmt = tx.prepare(
+    conn.execute("DELETE FROM media_genres WHERE media_id = ?1", params![media_id])?;
+    let mut stmt = conn.prepare(
         "INSERT INTO media_genres (media_id, genre_id, position) VALUES (?1, ?2, ?3)"
     )?;
     for (position, genre_id) in genre_ids.iter().enumerate() {
@@ -138,7 +137,5 @@ pub fn link_to_media(conn: &Connection, media_id: i64, genre_ids: &[i64]) -> Res
             stmt.execute(params![media_id, genre_id, position as i32])?;
         }
     }
-    drop(stmt);
-    tx.commit()?;
     Ok(())
 }

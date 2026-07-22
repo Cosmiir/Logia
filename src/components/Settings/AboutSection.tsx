@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Heart, Github, Sparkles, FolderOpen } from 'lucide-react';
+import { Heart, Github, Coffee } from 'lucide-react';
+import { openUrl } from '@tauri-apps/plugin-opener';
+import logiaLogo from '@/assets/LOGIA.png';
 import { getVersion } from '@tauri-apps/api/app';
 import { SectionTitle, Divider, SettingRow } from './shared';
 
@@ -15,8 +17,8 @@ const AboutSection: React.FC = () => {
     <>
       {/* App identity */}
       <div className="flex items-center gap-4 mb-6">
-        <div className="w-14 h-14 rounded-2xl bg-primary/20 border border-primary/30 flex items-center justify-center shadow-lg shadow-primary/10 shrink-0">
-          <Sparkles className="w-7 h-7 text-primary" />
+        <div className="w-14 h-14 rounded-2xl bg-primary/20 border border-primary/30 flex items-center justify-center shadow-lg shadow-primary/10 shrink-0 overflow-hidden">
+          <img src={logiaLogo} alt="Logia" className="w-9 h-9 object-contain" />
         </div>
         <div>
           <h2 className="text-lg font-bold text-white">Logia</h2>
@@ -38,16 +40,22 @@ const AboutSection: React.FC = () => {
           title={t('settings.about.sourceCode')}
           description={t('settings.about.viewOnGitHub')}
         >
-          <button className="text-xs text-gray-400 hover:text-white transition-colors cursor-pointer">{t('settings.about.open')} &rarr;</button>
+          <button
+            onClick={() => openUrl('https://github.com/Cosmiir/Logia')}
+            className="text-xs text-gray-400 hover:text-white transition-colors cursor-pointer"
+          >{t('settings.about.open')} &rarr;</button>
         </SettingRow>
         <SettingRow
-          icon={FolderOpen}
-          iconColor="text-amber-400"
-          iconBg="bg-amber-500/10"
-          title={t('settings.about.dataFolder')}
-          description={t('settings.about.openDataFolder')}
+          icon={Coffee}
+          iconColor="text-orange-400"
+          iconBg="bg-orange-500/10"
+          title={t('settings.about.support')}
+          description={t('settings.about.supportDescription')}
         >
-          <button className="text-xs text-gray-400 hover:text-white transition-colors cursor-pointer">{t('settings.about.open')} &rarr;</button>
+          <button
+            onClick={() => openUrl('https://ko-fi.com/cosmiir')}
+            className="text-xs text-gray-400 hover:text-white transition-colors cursor-pointer"
+          >{t('settings.about.open')} &rarr;</button>
         </SettingRow>
       </div>
 

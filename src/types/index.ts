@@ -249,6 +249,7 @@ export interface StorageInfo {
   total_size_bytes: number;
   total_media: number;
   total_images: number;
+  total_attachments: number;
 }
 
 export interface DuplicateDetail {

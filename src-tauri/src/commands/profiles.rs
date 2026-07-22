@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::sync::{LazyLock, Mutex};
 use std::time::{Duration, Instant};
 use crate::{AppState, db, models::{Profile, CreateProfileDto, UpdateProfileDto}};
+use crate::try_acquire_lock;
 
 const MAX_ATTEMPTS: u32 = 5;
 const BASE_LOCK_DURATION_MS: u64 = 1000;
@@ -133,11 +134,33 @@ pub async fn switch_profile(
         .cloned()
         .ok_or_else(|| format!("Profile '{}' not found", profile_id))?;
 
-    // Update active profile in manifest
+    // Acquire lock for the new profile BEFORE updating manifest
+    let profile_dir = db::profiles::profile_dir(&storage_dir, &profile_id);
+    let lock_path = profile_dir.join("logia.db.lock");
+    let new_lock = try_acquire_lock(&lock_path)
+        .ok_or_else(|| format!("Another instance is using profile '{}'.", profile_id))?;
+
+    // Now safe to update active profile in manifest
     db::profiles::set_active(&storage_dir, &profile_id)?;
+
+    // Checkpoint the old connection before swapping
+    {
+        let conn = state.db.lock().map_err(|e| e.to_string())?;
+        let _ = conn.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);");
+    }
 
     // Swap the DB connection
     let new_conn = db::profiles::ensure_profile_dir(&storage_dir, &profile_id);
+    
+    // Create a GFS backup of the new profile's database
+    db::backup::create_backup(&new_conn, &profile_dir);
+    
+    // Swap the lock (old lock is released via Drop)
+    {
+        let mut db_lock = state._db_lock.lock().map_err(|e| e.to_string())?;
+        *db_lock = Some(new_lock);
+    }
+    
     let mut db = state.db.lock().map_err(|e| e.to_string())?;
     *db = new_conn;
 

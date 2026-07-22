@@ -97,6 +97,9 @@ pub async fn get_storage_info(state: State<'_, AppState>) -> Result<StorageInfo,
     ).unwrap_or(None);
     let attachments_size_bytes = attachments_size_opt.unwrap_or(0) as u64;
 
+    let total_attachments: i32 = conn.query_row("SELECT COUNT(*) FROM media_attachments", [], |r| r.get(0))
+        .unwrap_or(0);
+
     let clean_images_size_bytes = if images_size > attachments_size_bytes {
         images_size - attachments_size_bytes
     } else {
@@ -110,6 +113,7 @@ pub async fn get_storage_info(state: State<'_, AppState>) -> Result<StorageInfo,
         total_size_bytes: total_db + clean_images_size_bytes + attachments_size_bytes,
         total_media,
         total_images,
+        total_attachments,
     })
 }
 

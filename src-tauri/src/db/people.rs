@@ -91,9 +91,8 @@ pub fn get_by_media_id(conn: &Connection, media_id: i64) -> Result<Vec<MediaCred
 }
 
 pub fn link_to_media(conn: &Connection, media_id: i64, credits: &[MediaCreditInput]) -> Result<()> {
-    let tx = conn.unchecked_transaction()?;
-    tx.execute("DELETE FROM media_credits WHERE media_id = ?1", params![media_id])?;
-    let mut stmt = tx.prepare(
+    conn.execute("DELETE FROM media_credits WHERE media_id = ?1", params![media_id])?;
+    let mut stmt = conn.prepare(
         "INSERT INTO media_credits (media_id, person_id, role, position) VALUES (?1, ?2, ?3, ?4)"
     )?;
     for (idx, credit) in credits.iter().enumerate() {
@@ -104,8 +103,6 @@ pub fn link_to_media(conn: &Connection, media_id: i64, credits: &[MediaCreditInp
             idx as i32 // Keep sequential ordering
         ])?;
     }
-    drop(stmt);
-    tx.commit()?;
     Ok(())
 }
 

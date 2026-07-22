@@ -8,7 +8,7 @@ Catalog and manage your movies, series, anime, manga, and video games, 100% offl
 [![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/Cosmiir/logia?color=purple)](https://github.com/Cosmiir/logia/releases)
 [![Platform](https://img.shields.io/badge/platform-Windows-blueviolet)](#installation)
-[![Buy Me a Coffee](https://img.shields.io/badge/Support-Buy%20Me%20a%20Coffee-FFDD00?logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/cosmiir)
+[![Ko-fi](https://img.shields.io/badge/Support-Ko--fi-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/cosmiir)
 
 ![Logia Dashboard](./screenshots/dashboard.png)
 
@@ -149,7 +149,7 @@ Copyright (c) 2026 Cosmiir
 
 Logia is free and open source. If you find the project useful and want to support its development:
 
-[![Buy Me a Coffee](https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png)](https://buymeacoffee.com/cosmiir)
+[![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/cosmiir)
 
 <div align="center">
   <sub>Built with passion - Open Source ❤️</sub>
