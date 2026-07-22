@@ -1729,7 +1729,7 @@ const Library: React.FC = () => {
     collectionId: selectedCollectionId ?? undefined,
     searchQuery: searchQuery || undefined,
     filters: activeFilters,
-    enabled: isFilterOpen,
+    enabled: isFilterOpen || activeFilters.some(f => f.type === 'creator'),
   });
 
   // Restore scroll position after media loading completes

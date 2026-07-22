@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Info, X, Paperclip, Calendar, CalendarCheck, Star, CircleDot, Activity } from 'lucide-react';
+import { Info, X, Paperclip, Calendar, CalendarCheck, Star, CircleDot, Activity, User } from 'lucide-react';
 import { MEDIA_STATUS_LABELS, MEDIA_STATUS_COLORS } from '@/lib/status-labels';
 import type { MediaStatus } from '@/types';
 import Tooltip from './Tooltip';
@@ -603,12 +603,54 @@ export const MediaCard: React.FC<MediaCardProps> = ({
 
             {/* Metadata rows */}
             <div className="flex flex-col gap-1 text-[10.5px] text-white/70 mb-2">
-              {media.creator && cardDensity !== 'compact' && (
-                <div className="flex items-baseline gap-1 truncate">
-                  <span className="text-white/40 shrink-0">{creatorLabel || t('common.creator')} :</span>
-                  <span className="font-semibold text-white/90 truncate">{media.creator}</span>
-                </div>
-              )}
+              {media.creator && (() => {
+                const creators = media.creator.split(';').map(c => c.trim()).filter(Boolean);
+                if (cardDensity === 'compact') {
+                  const remaining = creators.length - 1;
+                  return (
+                    <div className="flex items-center gap-1 min-w-0">
+                      <User className="w-3 h-3 text-white/40 shrink-0 mt-0.5" />
+                      <div className="flex items-center gap-0.5 min-w-0 overflow-hidden">
+                        <span
+                          className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9.5px] font-semibold bg-white/8 border border-white/12 text-white/85 min-w-0 overflow-hidden"
+                        >
+                          <Tooltip content={creators[0]} onlyWhenTruncated>
+                            <span className="truncate">{creators[0]}</span>
+                          </Tooltip>
+                        </span>
+                        {remaining > 0 && (
+                          <sup className="text-[8px] text-white/50 font-bold shrink-0">+{remaining}</sup>
+                        )}
+                      </div>
+                    </div>
+                  );
+                }
+                const maxVisible = 2;
+                const visible = creators.slice(0, maxVisible);
+                const remaining = creators.length - maxVisible;
+                return (
+                  <div className="flex items-center gap-1 min-w-0">
+                    <span className="text-white/40 shrink-0">{creatorLabel || t('common.creator')} :</span>
+                    <div className="flex items-center gap-1 min-w-0 overflow-hidden">
+                      {visible.map((cName, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9.5px] font-semibold bg-white/8 border border-white/12 text-white/85 min-w-0 overflow-hidden"
+                        >
+                          <Tooltip content={cName} onlyWhenTruncated>
+                            <span className="truncate">{cName}</span>
+                          </Tooltip>
+                        </span>
+                      ))}
+                      {remaining > 0 && (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9.5px] font-semibold text-white/50 bg-white/5 border border-white/10 whitespace-nowrap shrink-0">
+                          +{remaining}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
               {media.release_date && (
                 <div className="flex items-baseline gap-1 truncate">
                   {cardDensity === 'compact' ? (
@@ -631,8 +673,8 @@ export const MediaCard: React.FC<MediaCardProps> = ({
               )}
             </div>
 
-            {/* Genres — max 3 */}
-            {media.genres && media.genres.length > 0 && (
+            {/* Genres — max 3 (hidden in compact to save space for creators) */}
+            {media.genres && media.genres.length > 0 && cardDensity !== 'compact' && (
               <div className="flex flex-wrap gap-1 mb-2">
                 {media.genres.slice(0, 3).map((g) => (
                   <span

@@ -5,6 +5,15 @@ All notable changes to Logia will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2026-07-22
+
+### Fixed
+- MediaCard flip (back face) compact mode: creators were hidden, now visible with icon-based compact layout (1 creator + `+N` count)
+- MediaCard flip compact mode: genres now hidden to free space for creator display
+- MediaCard flip compact mode: creator `+N` count merged as superscript next to the pill instead of a separate truncated element
+- MediaCard flip all modes: creator pills with long names (e.g. "Everything Unlimited Ltd.") now truncate with ellipsis and show full name in a tooltip on hover
+- Library: creator filter popup showed an empty list because `useDistinctCreators` was only enabled when the filter presets menu was open (`isFilterOpen`), not when a creator filter pill popup was opened. Now also enabled when an active creator filter exists.
+
 ## [1.0.1] - 2026-07-20
 
 ### Fixed
