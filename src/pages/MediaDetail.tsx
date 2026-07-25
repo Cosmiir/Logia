@@ -21,6 +21,9 @@ import {
   FileText,
   Download,
   BookOpen,
+  Edit2,
+  Check,
+  GripVertical,
 } from 'lucide-react';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { invoke } from '@tauri-apps/api/core';
@@ -33,6 +36,23 @@ import MarkdownViewer from '@/components/MarkdownEditor/MarkdownViewer';
 import { useNavigationStore } from '@/stores/useNavigationStore';
 import { useFiltersStore } from '@/stores/useFiltersStore';
 import { useMediaDetail, useSimilarMedia, useUpdateMedia } from '@/hooks/useMedia';
+import { tauriApi } from '@/lib/tauri-api';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  closestCorners,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  rectSortingStrategy,
+  useSortable,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useCollections } from '@/hooks/useCollections';
 import { getCollectionIconComponent } from '@/components/CollectionIcons';
 import { MangaReader } from '@/components/MangaReader';
@@ -41,6 +61,7 @@ import { formatDateFr, formatProgression, formatFileSize } from '@/lib/utils';
 import { getRatingColor, getRatingCategory } from '@/utils/ratingColors';
 import { MEDIA_STATUS_LABELS, MEDIA_STATUS_COLORS, PROGRESS_STATUS_LABELS, PROGRESS_STATUS_COLORS } from '@/lib/status-labels';
 import { MAX_MATCHING_GENRES } from '@/lib/constants';
+import type { MediaAttachment } from '@/types';
 import * as Flags from 'country-flag-icons/react/3x2';
 
 /* ================================================================== */
@@ -475,8 +496,8 @@ const Lightbox: React.FC<{
       else if (e.key === 'r' || e.key === 'R') setRotation(r => (r + 90) % 360);
       else if (e.key === '0') { setZoom(1); setPan({ x: 0, y: 0 }); }
     };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
   }, [onClose, onPrev, onNext, zoom, isFullscreen, wasMaximizedBeforeFullscreen]);
 
   useEffect(() => {
@@ -545,6 +566,7 @@ const Lightbox: React.FC<{
     return (
       <div
         ref={wheelRef}
+        data-escape-to-close
         className="fixed inset-0 z-[200] flex items-center justify-center"
         style={{ background: '#000', cursor: zoom > 1 ? (isPanning ? 'grabbing' : 'grab') : 'default' }}
         onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}
@@ -583,7 +605,7 @@ const Lightbox: React.FC<{
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col" style={{ background: 'rgba(0,0,0,0.96)' }}>
+    <div data-escape-to-close className="fixed inset-0 z-[100] flex flex-col" style={{ background: 'rgba(0,0,0,0.96)' }}>
       <div
         ref={wheelRef}
         className="flex-1 relative flex items-center justify-center overflow-hidden"
@@ -680,6 +702,121 @@ const Lightbox: React.FC<{
 };
 
 /* ================================================================== */
+/*  Sortable Attachment Item                                            */
+/* ================================================================== */
+const SortableAttachment: React.FC<{
+  attachment: MediaAttachment;
+  isCbz: boolean;
+  isRenaming: boolean;
+  renameValue: string;
+  renameInputRef: React.RefObject<HTMLInputElement | null>;
+  onRenameChange: (val: string) => void;
+  onConfirmRename: () => void;
+  onCancelRename: () => void;
+  onStartRename: () => void;
+  onRead: () => void;
+  onDownload: () => void;
+}> = ({ attachment, isCbz, isRenaming, renameValue, renameInputRef, onRenameChange, onConfirmRename, onCancelRename, onStartRename, onRead, onDownload }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: attachment.id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 50 : 'auto',
+    position: 'relative',
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white/[0.03] border border-white/5">
+      {/* Drag handle */}
+      <button
+        type="button"
+        className="flex items-center justify-center w-6 h-8 text-white/20 hover:text-white/50 cursor-grab active:cursor-grabbing shrink-0 touch-none"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="w-3.5 h-3.5" />
+      </button>
+
+      <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
+        <FileText className="w-3.5 h-3.5 text-white/35" />
+      </div>
+
+      <div className="min-w-0 flex-1">
+        {isRenaming ? (
+          <input
+            ref={renameInputRef}
+            type="text"
+            value={renameValue}
+            onChange={(e) => onRenameChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') { e.preventDefault(); onConfirmRename(); }
+              else if (e.key === 'Escape') { e.preventDefault(); onCancelRename(); }
+            }}
+            onBlur={onConfirmRename}
+            className="w-full text-xs font-semibold text-white bg-white/10 border border-white/20 rounded px-1.5 py-0.5 focus:outline-none focus:border-primary/40"
+          />
+        ) : (
+          <>
+            <p className="text-xs font-semibold text-white/70 truncate" title={attachment.original_name}>{attachment.original_name}</p>
+            <p className="text-[10px] text-white/25">{formatFileSize(attachment.size_bytes)}</p>
+          </>
+        )}
+      </div>
+
+      {/* Confirm rename button (only when renaming) */}
+      {isRenaming && (
+        <button
+          type="button"
+          onClick={onConfirmRename}
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-emerald-400/70 hover:text-emerald-400 hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+          title={i18next.t('common.confirm')}
+        >
+          <Check className="w-3.5 h-3.5" />
+        </button>
+      )}
+
+      {/* Rename button (hidden when renaming) */}
+      {!isRenaming && (
+        <button
+          type="button"
+          onClick={onStartRename}
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-white/30 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+          title={i18next.t('common.rename')}
+        >
+          <Edit2 className="w-3.5 h-3.5" />
+        </button>
+      )}
+
+      {/* Read button for CBZ files */}
+      {isCbz && !isRenaming && (
+        <button
+          type="button"
+          onClick={onRead}
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-emerald-400/70 hover:text-emerald-400 hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+          title={i18next.t('mangaReader.read')}
+        >
+          <BookOpen className="w-3.5 h-3.5" />
+        </button>
+      )}
+
+      {/* Download button (hidden when renaming) */}
+      {!isRenaming && (
+        <button
+          type="button"
+          onClick={onDownload}
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-white/30 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+          title={i18next.t('mediaDetail.download')}
+        >
+          <Download className="w-3.5 h-3.5" />
+        </button>
+      )}
+    </div>
+  );
+};
+
+/* ================================================================== */
 /*  Main component                                                     */
 /* ================================================================== */
 const MediaDetail: React.FC = () => {
@@ -698,6 +835,72 @@ const MediaDetail: React.FC = () => {
   const [activeReader, setActiveReader] = useState<{ path: string; name: string } | null>(null);
   const [progressPrompt, setProgressPrompt] = useState<{ filename: string; volumeNum: number } | null>(null);
   const updateMedia = useUpdateMedia();
+
+  // Attachment rename + reorder state (must be before early returns)
+  const queryClient = useQueryClient();
+  const [renamingId, setRenamingId] = useState<number | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [localAttachments, setLocalAttachments] = useState<MediaAttachment[]>([]);
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
+  const attachments = media?.attachments ?? [];
+
+  useEffect(() => {
+    setLocalAttachments(attachments);
+  }, [attachments]);
+
+  useEffect(() => {
+    if (renamingId !== null && renameInputRef.current) {
+      renameInputRef.current.focus();
+      renameInputRef.current.select();
+    }
+  }, [renamingId]);
+
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
+
+  const handleStartRename = (attachment: MediaAttachment) => {
+    setRenamingId(attachment.id);
+    setRenameValue(attachment.original_name);
+  };
+
+  const handleConfirmRename = async () => {
+    if (renamingId === null) return;
+    const trimmed = renameValue.trim();
+    if (!trimmed || trimmed === attachments.find(a => a.id === renamingId)?.original_name) {
+      setRenamingId(null);
+      return;
+    }
+    try {
+      await tauriApi.media.renameAttachment(renamingId, trimmed);
+      await queryClient.invalidateQueries({ queryKey: ['media', 'detail', viewingMediaId] });
+    } catch (err) {
+      console.error('Failed to rename attachment:', err);
+    }
+    setRenamingId(null);
+  };
+
+  const handleCancelRename = () => {
+    setRenamingId(null);
+    setRenameValue('');
+  };
+
+  const handleAttachmentDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = localAttachments.findIndex(a => a.id === active.id);
+    const newIndex = localAttachments.findIndex(a => a.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(localAttachments, oldIndex, newIndex);
+    setLocalAttachments(reordered);
+    try {
+      await tauriApi.media.reorderAttachments(reordered.map(a => a.id));
+    } catch (err) {
+      console.error('Failed to reorder attachments:', err);
+      setLocalAttachments(attachments);
+    }
+  };
 
   // Calculate current media's matching genre IDs once (outside the map loop)
   const currentMatchingGenreIds = useMemo(
@@ -740,7 +943,6 @@ const MediaDetail: React.FC = () => {
 
   const coverSrc = media.cover_image ? `${convertFileSrc(media.cover_image)}?t=${media.updated_at}` : null;
   const galleryImages = media.images?.map(i => i.full_path) ?? [];
-  const attachments = media.attachments ?? [];
 
   const handleAttachmentDownload = async (path: string, fileName: string) => {
     try {
@@ -1026,44 +1228,35 @@ const MediaDetail: React.FC = () => {
                 </div>
               )}
 
-              {attachments.length > 0 && (
+              {localAttachments.length > 0 && (
                 <div className="mt-4 p-4 rounded-xl bg-white/[0.03] border border-white/5">
                   <div className="flex items-center gap-1.5 mb-3">
                     <Paperclip className="w-3.5 h-3.5 text-emerald-300/70" />
                     <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider">{i18next.t('common.attachments')}</p>
-                    <span className="ml-auto text-[10px] text-white/20">{attachments.length}</span>
+                    <span className="ml-auto text-[10px] text-white/20">{localAttachments.length}</span>
                   </div>
-                  <div className="space-y-2">
-                    {attachments.map((attachment) => (
-                      <div key={attachment.id} className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white/[0.03] border border-white/5">
-                        <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
-                          <FileText className="w-3.5 h-3.5 text-white/35" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-semibold text-white/70 truncate" title={attachment.original_name}>{attachment.original_name}</p>
-                          <p className="text-[10px] text-white/25">{formatFileSize(attachment.size_bytes)}</p>
-                        </div>
-                        {isCbzFile(attachment.original_name) && (
-                          <button
-                            type="button"
-                            onClick={() => setActiveReader({ path: attachment.stored_path, name: attachment.original_name })}
-                            className="w-8 h-8 rounded-lg flex items-center justify-center text-emerald-400/70 hover:text-emerald-400 hover:bg-white/10 transition-colors cursor-pointer shrink-0"
-                            title={t('mangaReader.read')}
-                          >
-                            <BookOpen className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => handleAttachmentDownload(attachment.stored_path, attachment.original_name)}
-                          className="w-8 h-8 rounded-lg flex items-center justify-center text-white/30 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
-                          title={t('mediaDetail.download')}
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                        </button>
+                  <DndContext sensors={dndSensors} collisionDetection={closestCorners} onDragEnd={handleAttachmentDragEnd}>
+                    <SortableContext items={localAttachments.map(a => a.id)} strategy={rectSortingStrategy}>
+                      <div className="space-y-2">
+                        {localAttachments.map((attachment) => (
+                          <SortableAttachment
+                            key={attachment.id}
+                            attachment={attachment}
+                            isCbz={isCbzFile(attachment.original_name)}
+                            isRenaming={renamingId === attachment.id}
+                            renameValue={renameValue}
+                            renameInputRef={renameInputRef}
+                            onRenameChange={setRenameValue}
+                            onConfirmRename={handleConfirmRename}
+                            onCancelRename={handleCancelRename}
+                            onStartRename={() => handleStartRename(attachment)}
+                            onRead={() => setActiveReader({ path: attachment.stored_path, name: attachment.original_name })}
+                            onDownload={() => handleAttachmentDownload(attachment.stored_path, attachment.original_name)}
+                          />
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </SortableContext>
+                  </DndContext>
                 </div>
               )}
             </div>

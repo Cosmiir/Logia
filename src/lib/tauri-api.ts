@@ -341,6 +341,14 @@ export const mediaApi = {
     return invoke('delete_media_attachment', { attachmentId });
   },
 
+  async renameAttachment(attachmentId: number, newName: string): Promise<void> {
+    return invoke('rename_media_attachment', { attachmentId, newName });
+  },
+
+  async reorderAttachments(attachmentIds: number[]): Promise<void> {
+    return invoke('reorder_media_attachments', { attachmentIds });
+  },
+
   async getCbzPages(relativePath: string): Promise<string[]> {
     return invoke('get_cbz_pages', { relativePath });
   },
@@ -491,8 +499,32 @@ export const dataApi = {
     return invoke('cleanup_orphaned_images');
   },
 
-  async exportDatabase(destinationPath: string, includeImages: boolean, includeAttachments: boolean): Promise<ExportResult> {
-    return invoke('export_database', { destinationPath, includeImages, includeAttachments });
+  async exportDatabase(
+    destinationPath: string,
+    includeImages: boolean,
+    includeAttachments: boolean,
+    onProgress?: (progress: {
+      current_file: string;
+      processed_files: number;
+      total_files: number;
+      processed_bytes: number;
+      total_bytes: number;
+      percent: number;
+    }) => void,
+  ): Promise<ExportResult> {
+    const channel = new Channel<{
+      current_file: string;
+      processed_files: number;
+      total_files: number;
+      processed_bytes: number;
+      total_bytes: number;
+      percent: number;
+    }>();
+    if (onProgress) {
+      channel.onmessage = onProgress;
+    }
+
+    return invoke('export_database', { destinationPath, includeImages, includeAttachments, onProgress: channel });
   },
 
   async exportToCsvOrMarkdown(request: CsvExportRequest): Promise<CsvExportResult> {

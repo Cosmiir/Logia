@@ -410,5 +410,6 @@ export interface MediaAttachment {
   original_name: string;
   stored_path: string;
   size_bytes: number;
+  position: number;
   created_at: string;
 }

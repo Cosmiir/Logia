@@ -141,6 +141,7 @@ pub struct MediaAttachment {
     pub original_name: String,
     pub stored_path: String,
     pub size_bytes: i64,
+    pub position: i32,
     pub created_at: String,
 }
 

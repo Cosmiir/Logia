@@ -44,6 +44,16 @@ pub struct ExportResult {
     pub exported_media: Option<i32>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct ExportProgress {
+    pub current_file: String,
+    pub processed_files: u64,
+    pub total_files: u64,
+    pub processed_bytes: u64,
+    pub total_bytes: u64,
+    pub percent: f64,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct CsvExportRequest {
     pub destination_path: String,

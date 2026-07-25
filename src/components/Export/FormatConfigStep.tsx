@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, ChevronLeft, FileText, Table2, Hash } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -96,16 +96,21 @@ const FormatConfigStep: React.FC<FormatConfigStepProps> = ({
                   : 'glass-card border-white/5 hover:border-white/15'
               )}
             >
-              {selected && (
-                <motion.div
-                  layoutId="format-selected"
-                  className="absolute top-3 right-3 w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center"
-                >
-                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                </motion.div>
-              )}
+              <AnimatePresence>
+                {selected && (
+                  <motion.div
+                    className="absolute top-3 right-3 w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center"
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.5 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                  >
+                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </motion.div>
+                )}
+              </AnimatePresence>
               <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center mb-3', selected ? 'bg-white/10' : 'bg-white/5')}>
                 <Icon className={cn('w-5 h-5', selected ? opt.color : 'text-white/40')} />
               </div>

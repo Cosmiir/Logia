@@ -41,6 +41,7 @@ import {
   FolderOpen,
   ArrowRightLeft,
   Circle,
+  Info,
 } from 'lucide-react';
 import type { SortCriterion, SortPreset, FilterCriterion, FilterPreset, FilterType, NumericFilterValue, NumericOperator } from '@/stores/useFiltersStore';
 import { useGenres } from '@/hooks/useGenres';
@@ -1513,6 +1514,9 @@ const Library: React.FC = () => {
   // Sizing submenu state
   const [isDensityMenuOpen, setIsDensityMenuOpen] = useState(false);
 
+  // Flip all cards state
+  const [flipAll, setFlipAll] = useState(false);
+
   // Sort & filter dropdowns
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -2342,6 +2346,19 @@ const Library: React.FC = () => {
               />
             </div>
 
+            {/* Flip all cards toggle */}
+            <button
+              onClick={() => setFlipAll((v) => !v)}
+              className={`flex items-center justify-center w-10 h-10 rounded-xl border transition-all cursor-pointer ${
+                flipAll
+                  ? 'bg-primary/15 border-primary/30 text-primary'
+                  : 'bg-white/5 border-white/10 text-text-secondary hover:bg-white/10 hover:text-white'
+              }`}
+              title={t('library.flipAll')}
+            >
+              <Info className="w-4 h-4" />
+            </button>
+
             {/* View toggle */}
             <div className="relative flex items-center bg-white/5 border border-white/10 rounded-xl p-1">
               {/* Sliding indicator */}
@@ -2507,6 +2524,7 @@ const Library: React.FC = () => {
                         collectionIcon={collection?.icon}
                         collectionColor={collection?.color}
                         cardDensity={cardDensity}
+                        flipAll={flipAll}
                         progressionLabel={collection?.progression_label}
                         progressionShortLabel={collection?.progression_short_label ?? undefined}
                         pluralWithS={collection?.plural_with_s ?? false}

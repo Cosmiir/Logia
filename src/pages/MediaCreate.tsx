@@ -28,6 +28,7 @@ import {
   Users,
   Paperclip,
   FileText,
+  Edit2,
 } from 'lucide-react';
 import {
   DndContext,
@@ -1390,6 +1391,105 @@ const CoverPreviewImg: React.FC<{
 };
 
 /* ================================================================== */
+/*  Sortable Attachment Item (for MediaCreate)                          */
+/* ================================================================== */
+const SortableAttachmentItem: React.FC<{
+  attachment: AttachedFile;
+  onRemove: (id: string) => void;
+  onRename: (id: string, newName: string) => void;
+}> = ({ attachment, onRemove, onRename }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: attachment.id });
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(attachment.name);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  const handleConfirm = () => {
+    const trimmed = editValue.trim();
+    if (trimmed && trimmed !== attachment.name) {
+      onRename(attachment.id, trimmed);
+    }
+    setIsEditing(false);
+  };
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 50 : 'auto',
+    position: 'relative',
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/8">
+      {/* Drag handle */}
+      <button
+        type="button"
+        className="flex items-center justify-center w-5 h-9 text-white/20 hover:text-white/50 cursor-grab active:cursor-grabbing shrink-0 touch-none"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="w-3.5 h-3.5" />
+      </button>
+
+      <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
+        <FileText className="w-4 h-4 text-white/35" />
+      </div>
+
+      <div className="min-w-0 flex-1">
+        {isEditing ? (
+          <input
+            ref={inputRef}
+            type="text"
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') { e.preventDefault(); handleConfirm(); }
+              else if (e.key === 'Escape') { e.preventDefault(); setIsEditing(false); setEditValue(attachment.name); }
+            }}
+            onBlur={handleConfirm}
+            className="w-full text-sm font-semibold text-white bg-white/10 border border-white/20 rounded px-2 py-0.5 focus:outline-none focus:border-primary/40"
+          />
+        ) : (
+          <>
+            <p className="text-sm font-semibold text-white/75 truncate" title={attachment.name}>{attachment.name}</p>
+            {attachment.isExisting && <p className="text-[11px] text-white/25">{formatFileSize(attachment.size)}</p>}
+          </>
+        )}
+      </div>
+
+      {/* Rename button */}
+      {!isEditing && (
+        <button
+          type="button"
+          onClick={() => { setEditValue(attachment.name); setIsEditing(true); }}
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-white/25 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+          title={i18next.t('common.rename')}
+        >
+          <Edit2 className="w-3.5 h-3.5" />
+        </button>
+      )}
+
+      {/* Remove button */}
+      <button
+        type="button"
+        onClick={() => onRemove(attachment.id)}
+        className="w-8 h-8 rounded-lg flex items-center justify-center text-white/25 hover:text-red-300 hover:bg-red-500/10 transition-colors cursor-pointer shrink-0"
+        title={i18next.t('common.remove')}
+      >
+        <Trash2 className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+};
+
+/* ================================================================== */
 /*  Main MediaCreate Page — Single-page layout                         */
 /* ================================================================== */
 const MediaCreate: React.FC = () => {
@@ -1489,6 +1589,7 @@ const MediaCreate: React.FC = () => {
   // Track dropped file paths for native drag-drop (optimized path - no base64 round-trip)
   const droppedFilePathsRef = useRef<string[]>([]);
   const attachmentFilePathsRef = useRef<string[]>([]);
+  const originalAttachmentNamesRef = useRef<Map<number, string>>(new Map());
 
   // Helper to convert File to base64 efficiently
   const toBase64 = (file: File): Promise<string> =>
@@ -1527,6 +1628,9 @@ const MediaCreate: React.FC = () => {
       isExisting: true,
       serverAttachmentId: attachment.id,
     }));
+    originalAttachmentNamesRef.current = new Map(
+      (m.attachments || []).map((a: MediaAttachment) => [a.id, a.original_name])
+    );
     setForm({
       title: m.title,
       collectionId: m.collection_id,
@@ -1808,6 +1912,23 @@ const MediaCreate: React.FC = () => {
       attachmentFilePathsRef.current = attachmentFilePathsRef.current.filter((path) => path !== removed.path);
     }
     setForm((prev) => ({ ...prev, attachments: prev.attachments.filter((attachment) => attachment.id !== id) }));
+  };
+
+  const handleAttachmentRename = (id: string, newName: string) => {
+    setForm((prev) => ({
+      ...prev,
+      attachments: prev.attachments.map((a) => a.id === id ? { ...a, name: newName } : a),
+    }));
+  };
+
+  const handleAttachmentDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = form.attachments.findIndex((a) => a.id === active.id);
+    const newIndex = form.attachments.findIndex((a) => a.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const newAttachments = arrayMove(form.attachments, oldIndex, newIndex);
+    setForm((prev) => ({ ...prev, attachments: newAttachments }));
   };
 
   const handleRemoveImage = async (id: string) => {
@@ -2134,6 +2255,31 @@ const MediaCreate: React.FC = () => {
             }
           }
           return;
+        }
+      }
+
+      // Rename existing attachments whose name changed
+      const existingAttachmentsAfter = form.attachments.filter((a) => a.isExisting && a.serverAttachmentId);
+      for (const att of existingAttachmentsAfter) {
+        const originalName = originalAttachmentNamesRef.current.get(att.serverAttachmentId!);
+        if (originalName !== undefined && originalName !== att.name) {
+          try {
+            await tauriApi.media.renameAttachment(att.serverAttachmentId!, att.name);
+          } catch (renameErr) {
+            console.error(`Failed to rename attachment ${att.serverAttachmentId}:`, renameErr);
+          }
+        }
+      }
+
+      // Reorder all existing attachments to match the form order
+      const orderedExistingIds = form.attachments
+        .filter((a) => a.isExisting && a.serverAttachmentId)
+        .map((a) => a.serverAttachmentId!);
+      if (orderedExistingIds.length > 0) {
+        try {
+          await tauriApi.media.reorderAttachments(orderedExistingIds);
+        } catch (reorderErr) {
+          console.error('Failed to reorder attachments:', reorderErr);
         }
       }
 
@@ -2824,27 +2970,20 @@ const MediaCreate: React.FC = () => {
 
               {form.attachments.length > 0 ? (
                 <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                    {form.attachments.map((attachment) => (
-                      <div key={attachment.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/8">
-                        <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
-                          <FileText className="w-4 h-4 text-white/35" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-white/75 truncate" title={attachment.name}>{attachment.name}</p>
-                          {attachment.isExisting && <p className="text-[11px] text-white/25">{formatFileSize(attachment.size)}</p>}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveAttachment(attachment.id)}
-                          className="w-8 h-8 rounded-lg flex items-center justify-center text-white/25 hover:text-red-300 hover:bg-red-500/10 transition-colors cursor-pointer"
-                          title={t('common.remove')}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                  <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleAttachmentDragEnd}>
+                    <SortableContext items={form.attachments.map((a) => a.id)} strategy={rectSortingStrategy}>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                        {form.attachments.map((attachment) => (
+                          <SortableAttachmentItem
+                            key={attachment.id}
+                            attachment={attachment}
+                            onRemove={handleRemoveAttachment}
+                            onRename={handleAttachmentRename}
+                          />
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </SortableContext>
+                  </DndContext>
                   {isAttachmentDragOver && (
                     <div className="mt-2.5 min-h-[60px] rounded-xl border-2 border-dashed border-green-500/40 bg-green-500/5 flex flex-col items-center justify-center gap-1.5 transition-all">
                       <Upload className="w-4 h-4 text-green-400" />

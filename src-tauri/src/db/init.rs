@@ -12,6 +12,9 @@ pub fn initialize_database(conn: &Connection) -> Result<()> {
         create_schema(conn)?;
     }
 
+    // Migrations for existing databases
+    migrate_schema(conn)?;
+
     // Set performance pragmas
     conn.execute_batch(
         "PRAGMA journal_mode = WAL;
@@ -142,6 +145,7 @@ fn create_schema(conn: &Connection) -> Result<()> {
             original_name TEXT NOT NULL,
             stored_path TEXT NOT NULL,
             size_bytes INTEGER NOT NULL DEFAULT 0,
+            position INTEGER NOT NULL DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (media_id) REFERENCES media(id) ON DELETE CASCADE
         );
@@ -275,6 +279,31 @@ fn create_schema(conn: &Connection) -> Result<()> {
 
     // Insert default review templates
     super::review_templates::insert_defaults(conn)?;
+
+    Ok(())
+}
+
+fn migrate_schema(conn: &Connection) -> Result<()> {
+    // Add position column to media_attachments if it doesn't exist
+    let has_position: bool = conn.query_row(
+        "SELECT COUNT(*) > 0 FROM pragma_table_info('media_attachments') WHERE name='position'",
+        [],
+        |row| row.get(0),
+    )?;
+    if !has_position {
+        conn.execute_batch(
+            "ALTER TABLE media_attachments ADD COLUMN position INTEGER NOT NULL DEFAULT 0;"
+        )?;
+        // Initialize positions based on current order (created_at ASC, id ASC)
+        conn.execute_batch(
+            "UPDATE media_attachments SET position = (
+                SELECT COUNT(*) FROM media_attachments AS sub
+                WHERE sub.media_id = media_attachments.media_id
+                AND (sub.created_at < media_attachments.created_at
+                     OR (sub.created_at = media_attachments.created_at AND sub.id < media_attachments.id))
+            );"
+        )?;
+    }
 
     Ok(())
 }

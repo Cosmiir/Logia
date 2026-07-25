@@ -67,11 +67,17 @@ export function useGlobalShortcuts() {
       }
 
       if (e.key === 'Escape') {
-        // If a dialog/modal is open, let its own Escape handler deal with it first.
-        // We check for common modal/dialog indicators in the DOM.
-        const modalEl = document.querySelector('[role="dialog"], [data-modal], [data-escape-to-close]');
+        // If a viewer/overlay with its own Escape handler is open, let it handle the event.
+        // These components listen on document/window and will close themselves.
+        const escapeCloseEl = document.querySelector('[data-escape-to-close]');
+        if (escapeCloseEl) {
+          e.preventDefault();
+          return;
+        }
+
+        // If a dialog/modal is open, dispatch synthetic Escape so its own listeners can close it.
+        const modalEl = document.querySelector('[role="dialog"], [data-modal]');
         if (modalEl) {
-          // Dispatch a synthetic Escape on the modal so its own listeners can close it.
           const synthetic = new KeyboardEvent('keydown', {
             key: 'Escape',
             bubbles: true,

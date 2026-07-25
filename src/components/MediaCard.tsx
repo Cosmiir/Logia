@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Info, X, Paperclip, Calendar, CalendarCheck, Star, CircleDot, Activity, User } from 'lucide-react';
 import { MEDIA_STATUS_LABELS, MEDIA_STATUS_COLORS } from '@/lib/status-labels';
@@ -98,7 +98,7 @@ const GLASS_CARD_STYLES = `
   }
 
   .media-card-front:hover .media-card-info-bar {
-    height: var(--card-info-h-hover, 140px);
+    height: var(--card-info-h-hover, var(--card-info-h, 64px));
   }
 
   .media-card-inner {
@@ -377,6 +377,7 @@ interface MediaCardProps {
   /** Dynamic experience date label — e.g: "Watched on", "Read on", "Played on" */
   experienceDateLabel?: string;
   cardDensity?: 'compact' | 'normal' | 'large' | 'detailed';
+  flipAll?: boolean;
   onContextMenu?: (e: React.MouseEvent) => void;
   onClick?: (e?: React.MouseEvent) => void;
   className?: string;
@@ -391,6 +392,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({
   creatorLabel = '',
   experienceDateLabel = '',
   cardDensity: rawCardDensity = 'normal',
+  flipAll = false,
   onContextMenu,
   onClick,
   className = '',
@@ -436,6 +438,19 @@ export const MediaCard: React.FC<MediaCardProps> = ({
 
   const collColor = collectionColor || getCollectionColor(collectionName);
 
+  // When flipAll is toggled on, trigger detail loading and force flip
+  useEffect(() => {
+    if (flipAll && !detail && !loadingDetail) {
+      setLoadingDetail(true);
+      mediaApi.getById(media.id)
+        .then((data) => { if (data) setDetail(data); })
+        .catch((err) => console.error('Error fetching media details for flipAll:', err))
+        .finally(() => setLoadingDetail(false));
+    }
+  }, [flipAll, media.id, detail, loadingDetail]);
+
+  const showFlipped = flipAll || isFlipped;
+
   const handleFlipClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
@@ -467,6 +482,8 @@ export const MediaCard: React.FC<MediaCardProps> = ({
     if (isFlipped) {
       setIsFlipped(false);
     }
+    // When flipAll is active, don't remove hover height var on mouse leave
+    if (flipAll) return;
     if (infoContentRef.current) {
       const cardEl = infoContentRef.current.closest('.media-card-perspective') as HTMLElement | null;
       if (cardEl) {
@@ -490,7 +507,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({
       {/* Sizer — hauteur = width × 1.5 (ratio 2:3) + info bar */}
       <div className="media-card-sizer" />
 
-      <div className={`media-card-inner ${isFlipped ? 'is-flipped' : ''}`}>
+      <div className={`media-card-inner ${showFlipped ? 'is-flipped' : ''}`}>
         
         {/* ========================================== */}
         {/*  FRONT FACE                                */}
@@ -499,7 +516,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({
           className="media-card-front w-full h-full relative group cursor-pointer overflow-hidden bg-zinc-900"
           onMouseEnter={handleMouseEnter}
           onClick={(e) => {
-            if (isFlipped) return;
+            if (showFlipped) return;
             onClick?.(e);
           }}
           onContextMenu={onContextMenu}
@@ -579,7 +596,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({
           <div className={`relative z-10 h-full flex flex-col ${cardDensity === 'compact' ? 'p-3' : 'p-3.5'}`}>
 
             {/* Header row: collection pill + close button */}
-            <div className="flex items-center justify-between mb-2.5">
+            <div className="flex items-center justify-between mb-2.5 shrink-0">
               <span
                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap"
                 style={{ color: collColor, background: `${collColor}22`, border: `1px solid ${collColor}44` }}
@@ -597,9 +614,11 @@ export const MediaCard: React.FC<MediaCardProps> = ({
             </div>
 
             {/* Title */}
-            <h4 className="text-[13.5px] font-extrabold text-white leading-snug line-clamp-2 mb-2">
-              {media.title}
-            </h4>
+            <Tooltip content={media.title} onlyWhenTruncated className="overflow-hidden min-w-0 mb-2 shrink-0">
+              <h4 className="text-[13.5px] font-extrabold text-white leading-snug line-clamp-2">
+                {media.title}
+              </h4>
+            </Tooltip>
 
             {/* Metadata rows */}
             <div className="flex flex-col gap-1 text-[10.5px] text-white/70 mb-2">
@@ -673,25 +692,33 @@ export const MediaCard: React.FC<MediaCardProps> = ({
               )}
             </div>
 
-            {/* Genres — max 3 (hidden in compact to save space for creators) */}
-            {media.genres && media.genres.length > 0 && cardDensity !== 'compact' && (
-              <div className="flex flex-wrap gap-1 mb-2">
-                {media.genres.slice(0, 3).map((g) => (
-                  <span
-                    key={g.id}
-                    className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold whitespace-nowrap"
-                    style={{ color: g.color, background: `${g.color}22`, border: `1px solid ${g.color}44` }}
-                  >
-                    {g.name}
-                  </span>
-                ))}
-                {media.genres.length > 3 && (
-                  <span className="text-[9px] px-1.5 py-0.5 rounded-full text-white/35 bg-white/5 border border-white/10 whitespace-nowrap">
-                    +{media.genres.length - 3}
-                  </span>
-                )}
-              </div>
-            )}
+            {/* Genres — max 2 in normal, 3 in large (hidden in compact) */}
+            {media.genres && media.genres.length > 0 && cardDensity !== 'compact' && (() => {
+              const maxGenres = cardDensity === 'normal' ? 2 : 3;
+              const visible = media.genres.slice(0, maxGenres);
+              const remaining = media.genres.length - maxGenres;
+              return (
+                <div className={`flex gap-1 mb-2 ${cardDensity === 'normal' ? 'flex-nowrap overflow-hidden' : 'flex-wrap'}`}>
+                  {visible.map((g) => (
+                    <Tooltip key={g.id} content={g.name} onlyWhenTruncated>
+                      <span
+                        className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold whitespace-nowrap ${cardDensity === 'normal' ? 'min-w-0 max-w-[60px] overflow-hidden text-ellipsis shrink' : ''}`}
+                        style={{ color: g.color, background: `${g.color}22`, border: `1px solid ${g.color}44` }}
+                      >
+                        {g.name}
+                      </span>
+                    </Tooltip>
+                  ))}
+                  {remaining > 0 && (
+                    <Tooltip content={media.genres.slice(maxGenres).map(g => g.name).join(', ')}>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full text-white/35 bg-white/5 border border-white/10 whitespace-nowrap shrink-0">
+                        +{remaining}
+                      </span>
+                    </Tooltip>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Spacer */}
             <div className="flex-1" />
@@ -802,6 +829,7 @@ export const MemoizedMediaCard = React.memo(MediaCard, (prevProps, nextProps) =>
     prevProps.creatorLabel === nextProps.creatorLabel &&
     prevProps.experienceDateLabel === nextProps.experienceDateLabel &&
     prevProps.cardDensity === nextProps.cardDensity &&
+    prevProps.flipAll === nextProps.flipAll &&
     prevProps.onContextMenu === nextProps.onContextMenu &&
     prevProps.onClick === nextProps.onClick
   );

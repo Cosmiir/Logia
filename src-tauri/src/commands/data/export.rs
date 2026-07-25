@@ -2,6 +2,56 @@ use tauri::State;
 use crate::AppState;
 use crate::db;
 use super::*;
+use std::io::{BufReader, Read, Write};
+
+const CHUNK_SIZE: usize = 64 * 1024;
+
+fn count_dir(dir: &std::path::Path) -> (u64, u64) {
+    let mut files: u64 = 0;
+    let mut bytes: u64 = 0;
+    if !dir.exists() { return (0, 0); }
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_file() {
+                files += 1;
+                if let Ok(meta) = std::fs::metadata(&path) {
+                    bytes += meta.len();
+                }
+            } else if path.is_dir() {
+                let (f, b) = count_dir(&path);
+                files += f;
+                bytes += b;
+            }
+        }
+    }
+    (files, bytes)
+}
+
+fn count_media_dir_without_attachments(dir: &std::path::Path) -> (u64, u64) {
+    let mut files: u64 = 0;
+    let mut bytes: u64 = 0;
+    if !dir.exists() { return (0, 0); }
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_file() {
+                files += 1;
+                if let Ok(meta) = std::fs::metadata(&path) {
+                    bytes += meta.len();
+                }
+            } else if path.is_dir() {
+                if entry.file_name() == "attachments" {
+                    continue;
+                }
+                let (f, b) = count_media_dir_without_attachments(&path);
+                files += f;
+                bytes += b;
+            }
+        }
+    }
+    (files, bytes)
+}
 
 fn translate_progress(s: &str) -> &str {
     match s {
@@ -23,11 +73,13 @@ fn translate_media_status(s: &str) -> &str {
     }
 }
 
-fn add_media_dir_without_attachments<W: std::io::Write + std::io::Seek>(
+fn add_media_dir_without_attachments<W: Write + std::io::Seek>(
     zip: &mut zip::ZipWriter<W>,
     dir: &std::path::Path,
     prefix: &str,
     options: zip::write::FileOptions,
+    on_progress: &tauri::ipc::Channel<ExportProgress>,
+    state: &mut ProgressState,
 ) -> Result<(), String> {
     if !dir.exists() { return Ok(()); }
 
@@ -36,24 +88,73 @@ fn add_media_dir_without_attachments<W: std::io::Write + std::io::Seek>(
         let name = format!("{}/{}", prefix, entry.file_name().to_string_lossy());
 
         if path.is_file() {
-            let data = std::fs::read(&path).map_err(|e| e.to_string())?;
-            zip.start_file(&name, options).map_err(|e| e.to_string())?;
-            std::io::Write::write_all(zip, &data).map_err(|e| e.to_string())?;
+            stream_file_to_zip(zip, &path, &name, options, on_progress, state)?;
         } else if path.is_dir() {
             if entry.file_name() == "attachments" {
                 continue;
             }
-            add_media_dir_without_attachments(zip, &path, &name, options)?;
+            add_media_dir_without_attachments(zip, &path, &name, options, on_progress, state)?;
         }
     }
     Ok(())
 }
 
-fn add_dir_to_zip<W: std::io::Write + std::io::Seek>(
+struct ProgressState {
+    processed_files: u64,
+    processed_bytes: u64,
+    total_files: u64,
+    total_bytes: u64,
+}
+
+impl ProgressState {
+    fn percent(&self) -> f64 {
+        if self.total_bytes == 0 { return 0.0; }
+        (self.processed_bytes as f64 / self.total_bytes as f64) * 100.0
+    }
+}
+
+fn stream_file_to_zip<W: Write + std::io::Seek>(
+    zip: &mut zip::ZipWriter<W>,
+    path: &std::path::Path,
+    name: &str,
+    options: zip::write::FileOptions,
+    on_progress: &tauri::ipc::Channel<ExportProgress>,
+    state: &mut ProgressState,
+) -> Result<(), String> {
+    let file = std::fs::File::open(path).map_err(|e| format!("Failed to open {}: {}", path.display(), e))?;
+    let file_name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+
+    zip.start_file(name, options).map_err(|e| e.to_string())?;
+
+    let mut reader = BufReader::with_capacity(CHUNK_SIZE, file);
+    let mut buf = vec![0u8; CHUNK_SIZE];
+    loop {
+        let n = reader.read(&mut buf).map_err(|e| e.to_string())?;
+        if n == 0 { break; }
+        zip.write_all(&buf[..n]).map_err(|e| e.to_string())?;
+        state.processed_bytes += n as u64;
+    }
+
+    state.processed_files += 1;
+    let _ = on_progress.send(ExportProgress {
+        current_file: file_name,
+        processed_files: state.processed_files,
+        total_files: state.total_files,
+        processed_bytes: state.processed_bytes,
+        total_bytes: state.total_bytes,
+        percent: state.percent(),
+    });
+
+    Ok(())
+}
+
+fn add_dir_to_zip<W: Write + std::io::Seek>(
     zip: &mut zip::ZipWriter<W>,
     dir: &std::path::Path,
     prefix: &str,
     options: zip::write::FileOptions,
+    on_progress: &tauri::ipc::Channel<ExportProgress>,
+    state: &mut ProgressState,
 ) -> Result<(), String> {
     if !dir.exists() { return Ok(()); }
 
@@ -62,11 +163,9 @@ fn add_dir_to_zip<W: std::io::Write + std::io::Seek>(
         let name = format!("{}/{}", prefix, entry.file_name().to_string_lossy());
 
         if path.is_file() {
-            let data = std::fs::read(&path).map_err(|e| e.to_string())?;
-            zip.start_file(&name, options).map_err(|e| e.to_string())?;
-            std::io::Write::write_all(zip, &data).map_err(|e| e.to_string())?;
+            stream_file_to_zip(zip, &path, &name, options, on_progress, state)?;
         } else if path.is_dir() {
-            add_dir_to_zip(zip, &path, &name, options)?;
+            add_dir_to_zip(zip, &path, &name, options, on_progress, state)?;
         }
     }
     Ok(())
@@ -79,6 +178,7 @@ pub async fn export_database(
     destination_path: String,
     include_images: bool,
     include_attachments: bool,
+    on_progress: tauri::ipc::Channel<ExportProgress>,
 ) -> Result<ExportResult, String> {
     let conn = state.db.lock().map_err(|e| e.to_string())?;
     let storage_dir = state.storage_dir.lock().map_err(|e| e.to_string())?;
@@ -92,27 +192,76 @@ pub async fn export_database(
 
     conn.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);").map_err(|e| e.to_string())?;
 
-    let file = std::fs::File::create(&destination_path)
-        .map_err(|e| format!("Failed to create file: {}", e))?;
-    let mut zip = zip::ZipWriter::new(file);
-    let options = zip::write::FileOptions::default()
-        .compression_method(zip::CompressionMethod::Deflated);
-
-    let db_data = std::fs::read(&db_path)
-        .map_err(|e| format!("Failed to read database: {}", e))?;
-    zip.start_file("logia.db", options).map_err(|e| e.to_string())?;
-    std::io::Write::write_all(&mut zip, &db_data).map_err(|e| e.to_string())?;
+    // Count total files and bytes for progress tracking
+    let db_size = std::fs::metadata(&db_path).map(|m| m.len()).unwrap_or(0);
+    let mut total_files: u64 = 1; // logia.db
+    let mut total_bytes: u64 = db_size;
 
     if include_images {
         if media_dir.exists() {
             if include_attachments {
-                add_dir_to_zip(&mut zip, &media_dir, "storage/media", options)?;
+                let (f, b) = count_dir(&media_dir);
+                total_files += f;
+                total_bytes += b;
             } else {
-                add_media_dir_without_attachments(&mut zip, &media_dir, "storage/media", options)?;
+                let (f, b) = count_media_dir_without_attachments(&media_dir);
+                total_files += f;
+                total_bytes += b;
             }
         }
         if people_dir.exists() {
-            add_dir_to_zip(&mut zip, &people_dir, "storage/people", options)?;
+            let (f, b) = count_dir(&people_dir);
+            total_files += f;
+            total_bytes += b;
+        }
+    }
+
+    let mut progress_state = ProgressState {
+        processed_files: 0,
+        processed_bytes: 0,
+        total_files,
+        total_bytes,
+    };
+
+    let file = std::fs::File::create(&destination_path)
+        .map_err(|e| format!("Failed to create file: {}", e))?;
+    let mut zip = zip::ZipWriter::new(file);
+
+    let stored_options = zip::write::FileOptions::default()
+        .compression_method(zip::CompressionMethod::Stored);
+
+    // Write DB file
+    zip.start_file("logia.db", stored_options).map_err(|e| e.to_string())?;
+    let db_file = std::fs::File::open(&db_path)
+        .map_err(|e| format!("Failed to read database: {}", e))?;
+    let mut db_reader = BufReader::with_capacity(CHUNK_SIZE, db_file);
+    let mut buf = vec![0u8; CHUNK_SIZE];
+    loop {
+        let n = db_reader.read(&mut buf).map_err(|e| e.to_string())?;
+        if n == 0 { break; }
+        zip.write_all(&buf[..n]).map_err(|e| e.to_string())?;
+        progress_state.processed_bytes += n as u64;
+    }
+    progress_state.processed_files += 1;
+    let _ = on_progress.send(ExportProgress {
+        current_file: "logia.db".to_string(),
+        processed_files: progress_state.processed_files,
+        total_files: progress_state.total_files,
+        processed_bytes: progress_state.processed_bytes,
+        total_bytes: progress_state.total_bytes,
+        percent: progress_state.percent(),
+    });
+
+    if include_images {
+        if media_dir.exists() {
+            if include_attachments {
+                add_dir_to_zip(&mut zip, &media_dir, "storage/media", stored_options, &on_progress, &mut progress_state)?;
+            } else {
+                add_media_dir_without_attachments(&mut zip, &media_dir, "storage/media", stored_options, &on_progress, &mut progress_state)?;
+            }
+        }
+        if people_dir.exists() {
+            add_dir_to_zip(&mut zip, &people_dir, "storage/people", stored_options, &on_progress, &mut progress_state)?;
         }
     }
 

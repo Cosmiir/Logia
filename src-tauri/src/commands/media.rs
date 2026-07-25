@@ -75,6 +75,25 @@ fn parse_sort_criteria(sort_criteria_json: &Option<String>) -> Vec<db::media::So
         })
 }
 
+/// Generate a unique on-disk filename for an uploaded image.
+///
+/// Previously the filename embedded the upload `position` (e.g.
+/// `{stem}_{position}_full.webp`), but `position` is only ever 100-199
+/// (drag-drop) or 200+ (paste) *during* an upload batch — it gets reset to
+/// 0,1,2... in the DB right after. Re-editing a media with a file that has
+/// the same stem reused the same 100-199 range and therefore the same
+/// filename, silently overwriting the previous file on disk.
+///
+/// Using a timestamp (down to the second) + a random suffix instead makes
+/// collisions effectively impossible, even across two uploads of files with
+/// identical names.
+fn unique_image_filename(stem: &str) -> String {
+    use rand::Rng;
+    let timestamp = chrono::Local::now().format("%y%m%d-%H%M%S");
+    let random: u32 = rand::thread_rng().gen_range(0..100);
+    format!("{}_{}_{:02}_full.webp", stem, timestamp, random)
+}
+
 /// Convert cover_image paths to absolute using storage_dir
 fn absolutize_covers(media: Vec<Media>, storage_dir: &Path) -> Vec<Media> {
     media.into_iter().map(|mut m| {
@@ -746,6 +765,68 @@ pub async fn delete_media_attachment(
 }
 
 #[tauri::command]
+pub async fn rename_media_attachment(
+    state: State<'_, AppState>,
+    attachment_id: i64,
+    new_name: String,
+) -> Result<(), String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    let storage_dir = state.storage_dir.lock().map_err(|e| e.to_string())?;
+
+    let attachment: MediaAttachment = db::media::get_attachment_by_id(&conn, attachment_id)
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| format!("Attachment not found: {}", attachment_id))?;
+
+    // Rename the actual file on disk
+    let path_abs = to_absolute_path(&storage_dir, &attachment.stored_path);
+    let file_path = std::path::Path::new(&path_abs);
+    if file_path.exists() {
+        let parent = file_path.parent()
+            .ok_or_else(|| "Cannot determine parent directory".to_string())?;
+        let safe_name = safe_attachment_file_name(&new_name);
+        let new_file_path = parent.join(&safe_name);
+        if new_file_path != *file_path {
+            std::fs::rename(file_path, &new_file_path)
+                .map_err(|e| format!("Failed to rename file: {}", e))?;
+
+            // Update stored_path in DB to reflect the new file name
+            let new_relative_path = new_file_path.strip_prefix(&*storage_dir)
+                .map(|p| p.to_string_lossy().replace('\\', "/"))
+                .unwrap_or_else(|_| attachment.stored_path.clone());
+            conn.execute(
+                "UPDATE media_attachments SET stored_path = ?1 WHERE id = ?2",
+                rusqlite::params![new_relative_path, attachment_id],
+            ).map_err(|e| e.to_string())?;
+        }
+    }
+
+    // Update the original_name in DB
+    db::media::update_attachment_name(&conn, attachment_id, &safe_attachment_file_name(&new_name))
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn reorder_media_attachments(
+    state: State<'_, AppState>,
+    attachment_ids: Vec<i64>,
+) -> Result<(), String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+
+    let positions: Vec<(i64, i32)> = attachment_ids
+        .iter()
+        .enumerate()
+        .map(|(idx, id)| (*id, idx as i32))
+        .collect();
+
+    db::media::update_attachment_positions(&conn, &positions)
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn update_media(
     state: State<'_, AppState>,
     mut dto: UpdateMediaDto,
@@ -869,7 +950,7 @@ pub async fn upload_media_image(
         .file_stem()
         .and_then(|s| s.to_str())
         .unwrap_or("image");
-    let full_name = format!("{}_{}_full.webp", stem, position);
+    let full_name = unique_image_filename(stem);
     let full_path = media_images_dir.join(&full_name);
 
     // Resize full image: max 1920px on longest side, keep aspect ratio
@@ -977,7 +1058,7 @@ pub async fn upload_media_images_from_paths(
             .file_stem()
             .and_then(|s| s.to_str())
             .unwrap_or("image");
-        let full_name = format!("{}_{}_full.webp", stem, position);
+        let full_name = unique_image_filename(stem);
         let full_path = media_images_dir.join(&full_name);
 
         // Emit saving progress

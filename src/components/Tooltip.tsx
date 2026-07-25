@@ -23,7 +23,7 @@ const Tooltip: React.FC<TooltipProps> = ({ content, children, delay = 400, class
     if (onlyWhenTruncated) {
       const child = el.firstElementChild as HTMLElement | null;
       const target = child || el;
-      if (target.scrollWidth <= target.clientWidth) return;
+      if (target.scrollWidth <= target.clientWidth && target.scrollHeight <= target.clientHeight) return;
     }
     timerRef.current = setTimeout(() => {
       if (triggerRef.current) {

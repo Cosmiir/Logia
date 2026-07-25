@@ -213,6 +213,8 @@ pub fn run() {
             commands::media::upload_media_images_from_paths,
             commands::media::upload_media_attachments_from_paths,
             commands::media::delete_media_attachment,
+            commands::media::rename_media_attachment,
+            commands::media::reorder_media_attachments,
             commands::media::get_cbz_pages,
             commands::media::read_cbz_page,
             commands::media::delete_media_image,

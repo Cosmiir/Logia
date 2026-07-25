@@ -1,11 +1,20 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
-import { Database, Image, HardDrive, ShieldCheck, Archive, ChevronRight, Loader2, Paperclip } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Database, Image, HardDrive, ShieldCheck, Archive, ChevronRight, Loader2, Paperclip, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { save } from '@tauri-apps/plugin-dialog';
 import { tauriApi } from '@/lib/tauri-api';
 import type { StorageInfo, ExportResult } from '@/types';
+
+interface ExportProgressState {
+  current_file: string;
+  processed_files: number;
+  total_files: number;
+  processed_bytes: number;
+  total_bytes: number;
+  percent: number;
+}
 
 interface ZipExportStepProps {
   storageInfo: StorageInfo | null;
@@ -25,6 +34,7 @@ const ZipExportStep: React.FC<ZipExportStepProps> = ({ storageInfo, onSuccess, o
   const { t } = useTranslation();
   const [exportLevel, setExportLevel] = useState<'db' | 'images' | 'full'>('images');
   const [isExporting, setIsExporting] = useState(false);
+  const [progress, setProgress] = useState<ExportProgressState | null>(null);
 
   const options = [
     {
@@ -64,6 +74,7 @@ const ZipExportStep: React.FC<ZipExportStepProps> = ({ storageInfo, onSuccess, o
 
   const handleExport = async () => {
     setIsExporting(true);
+    setProgress(null);
     try {
       const destPath = await save({
         filters: [{ name: 'Archive ZIP', extensions: ['zip'] }],
@@ -74,12 +85,15 @@ const ZipExportStep: React.FC<ZipExportStepProps> = ({ storageInfo, onSuccess, o
       const includeImages = exportLevel !== 'db';
       const includeAttachments = exportLevel === 'full';
 
-      const result = await tauriApi.data.exportDatabase(destPath, includeImages, includeAttachments);
+      const result = await tauriApi.data.exportDatabase(destPath, includeImages, includeAttachments, (p) => {
+        setProgress(p);
+      });
       onSuccess(result);
     } catch (e) {
       onError(String(e));
     } finally {
       setIsExporting(false);
+      setProgress(null);
     }
   };
 
@@ -154,17 +168,21 @@ const ZipExportStep: React.FC<ZipExportStepProps> = ({ storageInfo, onSuccess, o
               )}
             >
               {/* Selected indicator */}
-              {selected && (
-                <motion.div
-                  layoutId="zip-selected"
-                  className="absolute top-4 right-4 w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center"
-                  initial={false}
-                >
-                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                </motion.div>
-              )}
+              <AnimatePresence>
+                {selected && (
+                  <motion.div
+                    className="absolute top-4 right-4 w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center"
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.5 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                  >
+                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <div>
                 <div className={cn('w-12 h-12 rounded-xl mb-4 flex items-center justify-center', selected ? 'bg-white/10' : 'bg-white/5')}>
@@ -201,6 +219,54 @@ const ZipExportStep: React.FC<ZipExportStepProps> = ({ storageInfo, onSuccess, o
           {t('export.securityNote')}
         </p>
       </div>
+
+      {/* Progress bar during export */}
+      {isExporting && progress && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-card rounded-2xl p-5 space-y-4"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-white/70">
+              <Loader2 className="w-4 h-4 animate-spin text-primary" />
+              <span>{t('export.exporting')}</span>
+            </div>
+            <span className="text-sm font-bold tabular-nums text-white">{progress.percent.toFixed(1)}%</span>
+          </div>
+
+          {/* Progress bar */}
+          <div className="relative h-3 rounded-full bg-white/5 overflow-hidden">
+            <motion.div
+              className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary to-primary-dark rounded-full"
+              animate={{ width: `${progress.percent}%` }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+            />
+          </div>
+
+          {/* Stats row: file name left, counter right */}
+          <div className="flex items-center justify-between gap-4 text-xs text-white/40">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <FileText className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate" title={progress.current_file}>{progress.current_file}</span>
+            </div>
+            <div className="flex items-center gap-1.5 tabular-nums shrink-0">
+              <span className="text-white/60 font-semibold">{progress.processed_files}</span>
+              <span>/</span>
+              <span>{progress.total_files}</span>
+              <span className="ml-1">fichiers</span>
+            </div>
+          </div>
+
+          {/* Bytes row */}
+          <div className="flex items-center gap-1.5 text-xs text-white/40 tabular-nums">
+            <HardDrive className="w-3.5 h-3.5" />
+            <span className="text-white/60 font-semibold">{formatBytes(progress.processed_bytes)}</span>
+            <span>/</span>
+            <span>{formatBytes(progress.total_bytes)}</span>
+          </div>
+        </motion.div>
+      )}
 
       {/* Export button */}
       <div className="flex justify-end">

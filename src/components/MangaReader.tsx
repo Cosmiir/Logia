@@ -306,6 +306,7 @@ export const MangaReader: React.FC<MangaReaderProps> = ({
 
   return (
     <div 
+      data-escape-to-close
       className={cn(
         "fixed inset-0 z-[100] bg-black select-none overflow-hidden flex flex-col font-sans",
         !showControls && "cursor-none"

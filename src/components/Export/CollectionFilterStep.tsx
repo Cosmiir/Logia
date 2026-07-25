@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, ChevronLeft, Layers, Check, Download, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { save } from '@tauri-apps/plugin-dialog';
@@ -78,11 +78,19 @@ const CollectionFilterStep: React.FC<CollectionFilterStepProps> = ({
             <motion.button key={String(opt.val)} onClick={() => setExportAll(opt.val)} whileTap={{ scale: 0.98 }}
               className={cn('p-5 rounded-2xl border text-left transition-all cursor-pointer glass-card',
                 isSelected ? `${opt.border} shadow-lg ${opt.shadow} ${opt.bg}` : 'border-white/5 hover:border-white/15')}>
-              {isSelected && (
-                <motion.div layoutId="filter-check" className="float-right w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center">
-                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                </motion.div>
-              )}
+              <AnimatePresence>
+                {isSelected && (
+                  <motion.div
+                    className="float-right w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center"
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.5 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                  >
+                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                  </motion.div>
+                )}
+              </AnimatePresence>
               <Icon className={cn('w-8 h-8 mb-3', isSelected ? opt.color : 'text-white/30')} />
               <p className={cn('font-semibold text-sm mb-1', isSelected ? 'text-white' : 'text-white/60')}>{opt.title}</p>
               <p className="text-xs text-white/30">{opt.desc}</p>

@@ -1103,17 +1103,23 @@ pub fn insert_attachment(
     stored_path: &str,
     size_bytes: i64,
 ) -> Result<i64> {
+    // Get next position for this media
+    let next_pos: i32 = conn.query_row(
+        "SELECT COALESCE(MAX(position), -1) + 1 FROM media_attachments WHERE media_id = ?1",
+        params![media_id],
+        |row| row.get(0),
+    )?;
     conn.execute(
-        "INSERT INTO media_attachments (media_id, original_name, stored_path, size_bytes) VALUES (?1, ?2, ?3, ?4)",
-        params![media_id, original_name, stored_path, size_bytes],
+        "INSERT INTO media_attachments (media_id, original_name, stored_path, size_bytes, position) VALUES (?1, ?2, ?3, ?4, ?5)",
+        params![media_id, original_name, stored_path, size_bytes, next_pos],
     )?;
     Ok(conn.last_insert_rowid())
 }
 
 pub fn get_attachments(conn: &Connection, media_id: i64) -> Result<Vec<MediaAttachment>> {
     let mut stmt = conn.prepare(
-        "SELECT id, media_id, original_name, stored_path, size_bytes, created_at
-         FROM media_attachments WHERE media_id = ?1 ORDER BY created_at ASC, id ASC"
+        "SELECT id, media_id, original_name, stored_path, size_bytes, position, created_at
+         FROM media_attachments WHERE media_id = ?1 ORDER BY position ASC, id ASC"
     )?;
 
     let attachments = stmt.query_map(params![media_id], |row| {
@@ -1123,7 +1129,8 @@ pub fn get_attachments(conn: &Connection, media_id: i64) -> Result<Vec<MediaAtta
             original_name: row.get(2)?,
             stored_path: row.get(3)?,
             size_bytes: row.get(4)?,
-            created_at: row.get(5)?,
+            position: row.get(5)?,
+            created_at: row.get(6)?,
         })
     })?.collect::<Result<Vec<_>, _>>()?;
 
@@ -1132,7 +1139,7 @@ pub fn get_attachments(conn: &Connection, media_id: i64) -> Result<Vec<MediaAtta
 
 pub fn get_attachment_by_id(conn: &Connection, attachment_id: i64) -> Result<Option<MediaAttachment>> {
     let mut stmt = conn.prepare(
-        "SELECT id, media_id, original_name, stored_path, size_bytes, created_at
+        "SELECT id, media_id, original_name, stored_path, size_bytes, position, created_at
          FROM media_attachments WHERE id = ?1"
     )?;
 
@@ -1143,7 +1150,8 @@ pub fn get_attachment_by_id(conn: &Connection, attachment_id: i64) -> Result<Opt
             original_name: row.get(2)?,
             stored_path: row.get(3)?,
             size_bytes: row.get(4)?,
-            created_at: row.get(5)?,
+            position: row.get(5)?,
+            created_at: row.get(6)?,
         })
     }).optional()?;
 
@@ -1152,5 +1160,25 @@ pub fn get_attachment_by_id(conn: &Connection, attachment_id: i64) -> Result<Opt
 
 pub fn delete_attachment(conn: &Connection, attachment_id: i64) -> Result<()> {
     conn.execute("DELETE FROM media_attachments WHERE id = ?1", params![attachment_id])?;
+    Ok(())
+}
+
+pub fn update_attachment_name(conn: &Connection, attachment_id: i64, new_name: &str) -> Result<()> {
+    conn.execute(
+        "UPDATE media_attachments SET original_name = ?1 WHERE id = ?2",
+        params![new_name, attachment_id],
+    )?;
+    Ok(())
+}
+
+pub fn update_attachment_positions(conn: &Connection, positions: &[(i64, i32)]) -> Result<()> {
+    let tx = conn.unchecked_transaction()?;
+    for (attachment_id, position) in positions {
+        tx.execute(
+            "UPDATE media_attachments SET position = ?1 WHERE id = ?2",
+            params![position, attachment_id],
+        )?;
+    }
+    tx.commit()?;
     Ok(())
 }

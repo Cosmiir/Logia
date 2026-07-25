@@ -294,7 +294,7 @@ const Export: React.FC = () => {
         </button>
 
         {currentStep !== 'choose' && currentStep !== 'result' && (
-          <div className="mb-8">
+          <div className="mb-4">
             <Stepper
               steps={currentSteps}
               currentStep={currentStep}
@@ -307,7 +307,7 @@ const Export: React.FC = () => {
         {currentStep === 'result' ? (
           renderStep()
         ) : (
-          <AnimatePresence mode="sync" initial={false}>
+          <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={currentStep}
               initial={{ opacity: 0, y: 4 }}
