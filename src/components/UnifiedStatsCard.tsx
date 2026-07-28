@@ -67,7 +67,7 @@ export const UnifiedStatsCard: React.FC<UnifiedStatsCardProps> = ({
   const computedStats: ComputedStats | null = useMemo(() => {
     if (!stats) return null;
 
-    const rating100 = normalizeRating(stats.average_rating);
+    const rating100 = stats.rated_count > 0 ? normalizeRating(stats.average_rating) : 0;
     const trend = stats.trend_this_month - stats.trend_last_month;
 
     return {

@@ -191,9 +191,9 @@ const MentionSearchModal: React.FC<{
 
         {/* Footer hints */}
         <div className="px-3 py-1.5 border-t border-white/5 flex items-center gap-3 text-[9px] text-white/20">
-          <span>↑↓ naviguer</span>
-          <span>↵ sélectionner</span>
-          <span>Échap annuler</span>
+          <span>↑↓ {i18next.t('mediaCreate.navigateHint')}</span>
+          <span>↵ {i18next.t('mediaCreate.selectHint')}</span>
+          <span>{i18next.t('mediaCreate.escapeKey')} {i18next.t('mediaCreate.cancelHint')}</span>
         </div>
       </div>
     </>,
@@ -350,8 +350,8 @@ const GravityMarkdownEditor = forwardRef<GravityMarkdownEditorHandle, GravityMar
         mediaMention: {
           view: {
             type: ToolbarDataType.SingleButton,
-            title: 'Média',
-            hint: 'Lier un média (Ctrl+M)',
+            title: i18next.t('mediaCreate.mediaMentionTitle'),
+            hint: i18next.t('mediaCreate.mediaMentionHint'),
             icon: { data: Filmstrip },
             hotkey: 'Ctrl+M',
           },

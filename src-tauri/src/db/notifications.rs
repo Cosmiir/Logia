@@ -190,7 +190,7 @@ pub fn generate_all_notifications(conn: &Connection, profile_id: &str, prefs: &N
     // 2. Stagnant media (IN_PROGRESS, updated_at > 30 days, duplicate check 7 days)
     if prefs.stagnant_media {
         let mut stmt = conn.prepare(
-            "SELECT m.id, m.title FROM media m
+            "SELECT m.id, m.title, CAST(julianday('now') - julianday(m.updated_at) AS INTEGER) as days_stagnant FROM media m
              WHERE m.progress_status = 'IN_PROGRESS'
                AND m.updated_at < datetime('now', '-30 days')
                AND NOT EXISTS (
@@ -201,13 +201,15 @@ pub fn generate_all_notifications(conn: &Connection, profile_id: &str, prefs: &N
                )"
         )?;
         let rows = stmt.query_map(params![profile_id], |row| {
-            Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?))
+            Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?, row.get::<_, i64>(2)?))
         })?;
         for row in rows {
-            let (id, title) = row?;
+            let (id, title, days) = row?;
             let data = serde_json::to_string(&serde_json::json!({
                 "media_id": id,
-                "media_title": title
+                "media_title": title,
+                "title": title,
+                "days": days
             })).ok();
             pending.push(PendingNotification {
                 notification_type: "stagnant_media".to_string(),
@@ -223,7 +225,7 @@ pub fn generate_all_notifications(conn: &Connection, profile_id: &str, prefs: &N
     // 3. Waiting media (NOT_STARTED, created_at > 90 days, duplicate check 30 days)
     if prefs.waiting_media {
         let mut stmt = conn.prepare(
-            "SELECT m.id, m.title FROM media m
+            "SELECT m.id, m.title, CAST(julianday('now') - julianday(m.created_at) AS INTEGER) as days_waiting FROM media m
              WHERE m.progress_status = 'NOT_STARTED'
                AND m.created_at < datetime('now', '-90 days')
                AND NOT EXISTS (
@@ -234,13 +236,15 @@ pub fn generate_all_notifications(conn: &Connection, profile_id: &str, prefs: &N
                )"
         )?;
         let rows = stmt.query_map(params![profile_id], |row| {
-            Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?))
+            Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?, row.get::<_, i64>(2)?))
         })?;
         for row in rows {
-            let (id, title) = row?;
+            let (id, title, days) = row?;
             let data = serde_json::to_string(&serde_json::json!({
                 "media_id": id,
-                "media_title": title
+                "media_title": title,
+                "title": title,
+                "days": days
             })).ok();
             pending.push(PendingNotification {
                 notification_type: "waiting_media".to_string(),
@@ -278,6 +282,7 @@ pub fn generate_all_notifications(conn: &Connection, profile_id: &str, prefs: &N
             let data = serde_json::to_string(&serde_json::json!({
                 "media_id": id,
                 "media_title": title,
+                "title": title,
                 "progress": progress
             })).ok();
             pending.push(PendingNotification {
@@ -295,7 +300,7 @@ pub fn generate_all_notifications(conn: &Connection, profile_id: &str, prefs: &N
     // Objective deadline (< 7 days, progress < 50%, duplicate check 1 day)
     if prefs.objective_deadline {
         let mut stmt = conn.prepare(
-            "SELECT o.id, o.target_count,
+            "SELECT o.id, o.target_count, o.end_date,
                     (SELECT COUNT(*) FROM media m
                      WHERE m.collection_id = o.collection_id
                        AND m.experience_date IS NOT NULL
@@ -315,16 +320,19 @@ pub fn generate_all_notifications(conn: &Connection, profile_id: &str, prefs: &N
                )"
         )?;
         let rows = stmt.query_map(params![profile_id], |row| {
-            Ok((row.get::<_, i64>(0)?, row.get::<_, i32>(1)?, row.get::<_, i32>(2)?))
+            Ok((row.get::<_, i64>(0)?, row.get::<_, i32>(1)?, row.get::<_, String>(2)?, row.get::<_, i32>(3)?))
         })?;
         for row in rows {
-            let (id, target_count, current_count) = row?;
+            let (id, target_count, end_date, current_count) = row?;
             let progress = if target_count > 0 { (current_count as f64 / target_count as f64) * 100.0 } else { 0.0 };
             if progress < 50.0 {
-                let days_until_end = 7; // Already filtered to <= 7 days
+                let end = chrono::NaiveDate::parse_from_str(&end_date, "%Y-%m-%d").unwrap_or_else(|_| chrono::Local::now().date_naive());
+                let today = chrono::Local::now().date_naive();
+                let days_until_end = (end - today).num_days().max(0) as i32;
                 let data = serde_json::to_string(&serde_json::json!({
                     "objective_id": id,
-                    "progress": progress as i32
+                    "progress": progress as i32,
+                    "days": days_until_end
                 })).ok();
                 pending.push(PendingNotification {
                     notification_type: "objective_deadline".to_string(),
@@ -409,7 +417,8 @@ pub fn generate_all_notifications(conn: &Connection, profile_id: &str, prefs: &N
             if current_count >= target_count {
                 let data = serde_json::to_string(&serde_json::json!({
                     "objective_id": id,
-                    "target_count": target_count
+                    "target_count": target_count,
+                    "count": target_count
                 })).ok();
                 pending.push(PendingNotification {
                     notification_type: "objective_achieved".to_string(),
@@ -452,6 +461,9 @@ pub fn generate_all_notifications(conn: &Connection, profile_id: &str, prefs: &N
             let data = serde_json::to_string(&serde_json::json!({
                 "year": now.year(),
                 "month": now.month(),
+                "completed": completed_count,
+                "abandoned": abandoned_count,
+                "rating": (avg_rating * 10.0).round() / 10.0,
                 "completed_count": completed_count,
                 "abandoned_count": abandoned_count,
                 "average_rating": avg_rating

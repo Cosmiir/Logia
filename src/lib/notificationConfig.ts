@@ -1,5 +1,5 @@
 import { Clock, Hourglass, CheckCircle2, AlertTriangle, CircleOff, Trophy, CalendarDays } from 'lucide-react';
-import type { NotificationType } from '@/types';
+import type { NotificationType, Notification } from '@/types';
 import type { ElementType } from 'react';
 import i18next from 'i18next';
 
@@ -86,6 +86,78 @@ export function formatDate(dateString: string): string {
   if (diffHours < 24) return i18next.t('notifications.relativeTime.hoursAgo', { count: diffHours });
   if (diffDays < 7) return i18next.t('notifications.relativeTime.daysAgo', { count: diffDays });
   return date.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
+}
+
+const MONTH_KEYS = [
+  'january', 'february', 'march', 'april', 'may', 'june',
+  'july', 'august', 'september', 'october', 'november', 'december',
+];
+
+const RULE_KEY_MAP: Record<NotificationType, string> = {
+  stagnant_media: 'stagnantMedia',
+  waiting_media: 'waitingMedia',
+  near_completion: 'nearCompletion',
+  objective_deadline: 'objectiveDeadline',
+  objective_stalled: 'objectiveStalled',
+  objective_achieved: 'objectiveAchieved',
+  monthly_report: 'monthlyReport',
+};
+
+export function getNotificationDisplay(notification: Notification): { title: string; message: string } {
+  const rawData = notification.data;
+  const data: Record<string, unknown> = typeof rawData === 'string'
+    ? (() => { try { return JSON.parse(rawData); } catch { return {}; } })()
+    : (rawData ?? {});
+  const ruleKey = `notifications.rules.${RULE_KEY_MAP[notification.type] ?? notification.type}`;
+
+  switch (notification.type) {
+    case 'stagnant_media':
+    case 'waiting_media':
+      return {
+        title: i18next.t(`${ruleKey}.title`, { title: data.title ?? data.media_title ?? '' }),
+        message: i18next.t(`${ruleKey}.message`, { days: data.days ?? 0 }),
+      };
+
+    case 'near_completion':
+      return {
+        title: i18next.t(`${ruleKey}.title`, { title: data.title ?? data.media_title ?? '' }),
+        message: i18next.t(`${ruleKey}.message`, { progress: data.progress ?? 0 }),
+      };
+
+    case 'objective_deadline':
+      return {
+        title: i18next.t(`${ruleKey}.title`),
+        message: i18next.t(`${ruleKey}.message`, { days: data.days ?? 0, progress: data.progress ?? 0 }),
+      };
+
+    case 'objective_stalled':
+      return {
+        title: i18next.t(`${ruleKey}.title`),
+        message: i18next.t(`${ruleKey}.message`),
+      };
+
+    case 'objective_achieved':
+      return {
+        title: i18next.t(`${ruleKey}.title`),
+        message: i18next.t(`${ruleKey}.message`, { count: data.count ?? data.target_count ?? 0 }),
+      };
+
+    case 'monthly_report': {
+      const monthIdx = typeof data.month === 'number' ? data.month - 1 : 0;
+      const monthName = i18next.t(`notifications.rules.months.${MONTH_KEYS[monthIdx] ?? MONTH_KEYS[0]}`);
+      return {
+        title: i18next.t(`${ruleKey}.title`, { month: monthName, year: data.year ?? '' }),
+        message: i18next.t(`${ruleKey}.message`, {
+          completed: data.completed ?? data.completed_count ?? 0,
+          abandoned: data.abandoned ?? data.abandoned_count ?? 0,
+          rating: data.rating ?? (typeof data.average_rating === 'number' ? Math.round(data.average_rating * 10) / 10 : 0),
+        }),
+      };
+    }
+
+    default:
+      return { title: notification.title, message: notification.message };
+  }
 }
 
 export function formatDateLong(dateString: string): string {

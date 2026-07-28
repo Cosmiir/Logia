@@ -14,6 +14,7 @@
     "continue": "Continue",
     "next": "Next",
     "creating": "Creating...",
+    "saving": "Saving...",
     "password": "Password",
     "optional": "optional",
     "confirm": "Confirm",
@@ -21,6 +22,7 @@
     "avatar": "Avatar",
     "media": "media",
     "mediaSingular": "media",
+    "consume": "Consume",
     "creator": "Creator",
     "experienceDate": "Experience date",
     "collection": "Collection",
@@ -30,6 +32,20 @@
     "progressStatus": "Progress status",
     "progression": "Progression",
     "rating": "Rating",
+    "ratingCategory": {
+      "notRated": "Not rated",
+      "masterpiece": "Masterpiece",
+      "perfect": "Perfect",
+      "excellent": "Excellent",
+      "veryGood": "Very good",
+      "good": "Good",
+      "fine": "Fine",
+      "decent": "Decent",
+      "average": "Average",
+      "passable": "Passable",
+      "bad": "Bad",
+      "terrible": "Terrible"
+    },
     "mediaStatus": "Media status",
     "dateAdded": "Date added",
     "genre": "Genre",
@@ -430,9 +446,9 @@
     "dragPasteClick": "Drag · Paste · Click",
     "imageFormats": "JPG · PNG · WebP",
     "firstIsCover": "The first is the cover. Drag to reorder.",
-    "notesAndPoints": "Notes and points",
+    "attachmentDropHint": "Drag files here or click to browse — saves, configs, ebooks, archives...",
     "infoGroup": "Information",
-    "ratingAndReview": "Rating & Review",
+    "ratingAndReview": "Rating & Points",
     "others": "Others",
     "positivePlaceholder": "What you liked...",
     "negativePlaceholder": "What could be improved...",
@@ -477,13 +493,29 @@
     "noMediaFound": "No media found",
     "typeToSearch": "Type to search…",
     "escapeKey": "Esc",
-    "dropFilesHere": "Drop files here"
+    "navigateHint": "navigate",
+    "selectHint": "select",
+    "cancelHint": "cancel",
+    "mediaMentionTitle": "Media",
+    "mediaMentionHint": "Link a media (Ctrl+M)",
+    "dropFilesHere": "Drop files here",
+    "matchingAndFilters": "MATCHING & FILTERS ({{count}}/9)",
+    "matchingHint": "These first 9 genres define similar media recommendations.",
+    "noPrimaryGenre": "No primary genre",
+    "filtersOnly": "FILTERS ONLY ({{count}}/6)",
+    "filtersHint": "Beyond 9, these genres are used only for filtering and search.",
+    "noSecondaryGenre": "No secondary genre",
+    "moreResults_one": "{{count}} more result — refine your search",
+    "moreResults_other": "{{count}} more results — refine your search",
+    "createGenre": "Create \"{{name}}\"",
+    "createPerson": "Create person \"{{name}}\""
   },
   "profileSelect": {
     "whoIsWatching": "Who's watching?",
     "selectProfile": "Select your profile to continue"
   },
   "navigation": {
+    "dashboard": "Dashboard",
     "library": "Library",
     "stats": "Statistics",
     "genres": "Genres",
@@ -494,8 +526,8 @@
   "notifications": {
     "title": "Notifications",
     "all": "All",
-    "unread": "unread",
-    "unread_other": "unread",
+    "unread": "Unread",
+    "unread_other": "Unread",
     "notification": "notification",
     "notification_other": "notifications",
     "markAllAsRead": "Mark all as read",
@@ -516,6 +548,51 @@
     "monthlyReport": "Monthly report",
     "filterByType": "Filter by type",
     "filter": "Filter",
+    "none": "No notifications",
+    "rules": {
+      "stagnantMedia": {
+        "title": "{{title}} is stagnating",
+        "message": "This work has been in progress for {{days}} days without progress."
+      },
+      "waitingMedia": {
+        "title": "{{title}} is waiting",
+        "message": "This work has been in the \"to start\" list for {{days}} days."
+      },
+      "nearCompletion": {
+        "title": "{{title}} almost finished!",
+        "message": "You're at {{progress}}% of this work. Keep it up!"
+      },
+      "objectiveDeadline": {
+        "title": "Objective behind schedule",
+        "message": "Deadline in {{days}} days and only {{progress}}% completed."
+      },
+      "objectiveStalled": {
+        "title": "Objective at a standstill",
+        "message": "You're halfway through the period and haven't started this objective yet."
+      },
+      "objectiveAchieved": {
+        "title": "🎉 Objective achieved!",
+        "message": "Congratulations! You've reached your goal of {{count}} works."
+      },
+      "monthlyReport": {
+        "title": "Report {{month}} {{year}}",
+        "message": "{{completed}} works completed, {{abandoned}} abandoned. Average rating: {{rating}}/100"
+      },
+      "months": {
+        "january": "January",
+        "february": "February",
+        "march": "March",
+        "april": "April",
+        "may": "May",
+        "june": "June",
+        "july": "July",
+        "august": "August",
+        "september": "September",
+        "october": "October",
+        "november": "November",
+        "december": "December"
+      }
+    },
     "dateGroups": {
       "today": "Today",
       "yesterday": "Yesterday",
@@ -539,6 +616,9 @@
     }
   },
   "stats": {
+    "allCollections": "All collections",
+    "allTime": "All time",
+    "customPeriod": "Custom period",
     "noRatedMedia": "No rated media",
     "media": "Media",
     "finished": "finished",
@@ -565,6 +645,9 @@
     "mediaCompleted": "Media completed",
     "outOf": "out of",
     "activityOverTime": "Activity over time",
+    "allYears": "All years",
+    "clickYearHint": "Click a year to see monthly breakdown",
+    "clickMonthHint": "Click a month to see daily breakdown",
     "noCompletedThisPeriod": "No media completed in this period",
     "seasonality": "Seasonality",
     "seasonalityHint": "Media completed by month — all years combined",
@@ -654,7 +737,10 @@
     "descriptions": {
       "fieldDisplay": "When creating a media in this collection, the field will display as:",
       "displayedFields": "Displayed fields:",
-      "trackingDisplay": "Tracking in media page: ... — Short on card:",
+      "trackingDisplayPrefix": "Tracking in media page:",
+      "trackingDisplaySeparator": "— Short on card:",
+      "currentSuffix": "current",
+      "objectivesDisplay": "Displayed in objectives:",
       "mediaPageDisplay": "Displayed in media page for:",
       "monthlyCapacity": "You can {{verb}} about {{count}} {{name}} per month",
       "linearCalculation": "Leave empty for linear calculation in objectives"
@@ -670,6 +756,7 @@
       "creatorExamples": "Ex: Director, Author, Developer, Artist...",
       "experienceDate": "Ex: Watch date...",
       "shortLabel": "Ex: Ep, Chap, H...",
+      "progressionExamples": "Ex: Episode, Chapter, Hour, Track...",
       "durationExamples": "Ex: Duration, Episodes, Chapters, Hours...",
       "consumptionVerb": "Ex: Read, Watch, Play, Listen...",
       "capacity": "Ex: 4, 8, 15..."
@@ -903,7 +990,9 @@
     "startDateLabel": "Start date",
     "endDateLabel": "End date",
     "editObjective": "Edit objective",
+    "editObjectiveSubtitle": "Modify your objective parameters",
     "newObjective": "New objective",
+    "newObjectiveSubtitle": "Set an objective to track your progress",
     "createObjective": "Create objective",
     "previewFrom": "from",
     "previewTo": "to"
@@ -1031,6 +1120,126 @@
     "errorTitle": "Reader error",
     "loading": "Loading...",
     "updateProgressPrompt": "You finished reading {{filename}}. Would you like to update your progress to {{progress}} ?",
-    "updateProgressTitle": "Update progress?"
+    "updateProgressTitle": "Update progress?",
+    "skip": "Skip",
+    "update": "Update"
+  },
+  "tutorial": {
+    "badge": "New here? Discover Logia",
+    "skip": "Skip tutorial",
+    "previous": "Previous",
+    "next": "Next",
+    "done": "Done",
+    "dontShowAgain": "Don't show again",
+    "step": "Step {{current}}/{{total}}",
+    "actionRequired": "Action required",
+    "clickToContinue": "Click the highlighted element to continue",
+    "phases": {
+      "gettingStarted": "Getting started",
+      "collectionSetup": "Collection setup",
+      "mediaCreation": "Media creation"
+    },
+    "steps": {
+      "welcome": {
+        "title": "Welcome to Logia",
+        "desc": "Logia helps you organize and track your media collections. This quick tour will guide you through creating your first collection and adding a media item. Let's get started!"
+      },
+      "goToLibrary": {
+        "title": "Go to your Library",
+        "desc": "Click \"Library\" in the navigation bar to access your collections."
+      },
+      "libraryNewCollection": {
+        "title": "Create a collection",
+        "desc": "Hover over the collection bar: a \"+\" button will appear automatically. Click it to create your first collection."
+      },
+      "collectionName": {
+        "title": "Name your collection",
+        "desc": "Give it a clear name such as Movies, Series, Manga, or Books."
+      },
+      "collectionDynamicIntro": {
+        "title": "Dynamic fields",
+        "desc": "Customize the labels displayed throughout the app. Instead of generic terms like 'Creator' or 'Date', each collection adapts to its content ('Author' for books, 'Director' for movies, etc.)."
+      },
+      "collectionCreator": {
+        "title": "The creator label",
+        "desc": "This field defines how the creator is named, for instance 'Author' for books, 'Director' for movies, or 'Studio' for series."
+      },
+      "collectionDates": {
+        "title": "Date fields",
+        "desc": "Customize your date labels for first-time experiences and re-reads/re-watches, such as 'Read date' and 'Re-read date'."
+      },
+      "collectionProgression": {
+        "title": "The progression label",
+        "desc": "Define your progression unit: 'Episode' for series, 'Chapter' for books, or 'Volume' for manga. The short label is used in compact views."
+      },
+      "collectionAdvanced": {
+        "title": "Advanced options",
+        "desc": "Customize total duration (e.g. 'Runtime' or 'Pages'), consumption verbs for goals, and an optional monthly target."
+      },
+      "collectionVisual": {
+        "title": "Visual customization",
+        "desc": "Preview your collection layout live. Choose a color and icon to quickly identify your collection in the library."
+      },
+      "collectionSave": {
+        "title": "Save your collection",
+        "desc": "Click Save to create your collection. You can update these settings at any time."
+      },
+      "libraryAddMedia": {
+        "title": "Add your first media",
+        "desc": "Click \"New\" to create your first media item in this collection."
+      },
+      "mediaCollectionDropdown": {
+        "title": "Choosing a collection",
+        "desc": "Select which collection your media belongs to, or create a new collection directly from this menu."
+      },
+      "mediaTitle": {
+        "title": "Name your media",
+        "desc": "Enter the media title. This is one of the few required fields alongside collection selection."
+      },
+      "mediaCreator": {
+        "title": "The creator",
+        "desc": "Enter the author, director, or studio. Automatic suggestions will appear as you type."
+      },
+      "mediaStatusDate": {
+        "title": "Status and release date",
+        "desc": "Set your media's current status (upcoming, in progress, completed) and official release date."
+      },
+      "mediaSynopsis": {
+        "title": "The synopsis",
+        "desc": "Write a description or summary. Markdown formatting is supported to structure your content."
+      },
+      "mediaCover": {
+        "title": "Cover preview",
+        "desc": "This card previews the cover image. Images added in the Gallery section below serve as cover artwork."
+      },
+      "mediaGenres": {
+        "title": "Genres",
+        "desc": "Assign genres to organize your media and refine recommendations for similar content."
+      },
+      "mediaProgress": {
+        "title": "Progress",
+        "desc": "Track your progress with current status, episode/chapter count, and total count. Keep a log of rewatches or re-reads."
+      },
+      "mediaReview": {
+        "title": "Detailed review",
+        "desc": "Write a detailed review with Markdown, or insert a pre-defined review template."
+      },
+      "mediaRating": {
+        "title": "Rating and pros/cons",
+        "desc": "Score your experience out of 100 and list positive and negative highlights."
+      },
+      "mediaGallery": {
+        "title": "Image gallery",
+        "desc": "Add up to 12 images per media via drag-and-drop or clipboard, then easily reorder them."
+      },
+      "mediaAttachments": {
+        "title": "Attached files",
+        "desc": "Attach complementary files such as game saves, ebooks, or archives to keep everything together."
+      },
+      "mediaCreate": {
+        "title": "Create your first media",
+        "desc": "Review your information and save. You're all set!"
+      }
+    }
   }
 }

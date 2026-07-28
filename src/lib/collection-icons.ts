@@ -105,34 +105,3 @@ export const COLLECTION_COLORS: string[] = [
   '#f43f5e', // rose
 ];
 
-/**
- * Presets for creator_label and date_label based on common collection types.
- */
-export const LABEL_PRESETS: Record<string, { creator_label: string; date_label: string; progression_label: string; duration_label: string }> = {
-  'Film': { creator_label: 'Director', date_label: 'Watch date', progression_label: 'Minute', duration_label: 'Duration' },
-  'Série': { creator_label: 'Director', date_label: 'Watch date', progression_label: 'Episode', duration_label: 'Episodes' },
-  'Anime': { creator_label: 'Studio', date_label: 'Watch date', progression_label: 'Episode', duration_label: 'Episodes' },
-  'Manga': { creator_label: 'Author', date_label: 'Read date', progression_label: 'Chapter', duration_label: 'Chapters' },
-  'Manhwa': { creator_label: 'Author', date_label: 'Read date', progression_label: 'Chapter', duration_label: 'Chapters' },
-  'Livre': { creator_label: 'Author', date_label: 'Read date', progression_label: 'Chapter', duration_label: 'Chapters' },
-  'Jeu vidéo': { creator_label: 'Developer', date_label: 'Play date', progression_label: 'Hour', duration_label: 'Hours' },
-  'Musique': { creator_label: 'Artist', date_label: 'Listen date', progression_label: 'Track', duration_label: 'Tracks' },
-  'Podcast': { creator_label: 'Host', date_label: 'Listen date', progression_label: 'Episode', duration_label: 'Episodes' },
-  'Théâtre': { creator_label: 'Director', date_label: 'Performance date', progression_label: 'Act', duration_label: 'Acts' },
-  'Jeu de société': { creator_label: 'Publisher', date_label: 'Play date', progression_label: 'Session', duration_label: 'Sessions' },
-  'Concert': { creator_label: 'Artist', date_label: 'Concert date', progression_label: 'Track', duration_label: 'Tracks' },
-};
-
-/**
- * Try to auto-fill creator/date labels from a collection name.
- */
-export function getPresetLabels(name: string): { creator_label: string; date_label: string; progression_label: string; duration_label: string } | null {
-  // Try exact match first
-  if (LABEL_PRESETS[name]) return LABEL_PRESETS[name];
-  // Try case-insensitive
-  const lower = name.toLowerCase();
-  for (const [key, value] of Object.entries(LABEL_PRESETS)) {
-    if (key.toLowerCase() === lower) return value;
-  }
-  return null;
-}

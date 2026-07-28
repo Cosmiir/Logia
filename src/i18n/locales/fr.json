@@ -14,6 +14,7 @@
     "continue": "Continuer",
     "next": "Suivant",
     "creating": "Création...",
+    "saving": "Enregistrement...",
     "password": "Mot de passe",
     "optional": "optionnel",
     "confirm": "Confirmer",
@@ -21,6 +22,7 @@
     "avatar": "Avatar",
     "media": "médias",
     "mediaSingular": "média",
+    "consume": "Consommer",
     "image": "Image",
     "image_other": "Images",
     "language": "Langue",
@@ -40,6 +42,20 @@
     "progressStatus": "Statut de progression",
     "progression": "Progression",
     "rating": "Note",
+    "ratingCategory": {
+      "notRated": "Non noté",
+      "masterpiece": "Chef-d'œuvre",
+      "perfect": "Parfait",
+      "excellent": "Excellent",
+      "veryGood": "Très bon",
+      "good": "Bien",
+      "fine": "Bon",
+      "decent": "Assez bon",
+      "average": "Moyen",
+      "passable": "Passable",
+      "bad": "Mauvais",
+      "terrible": "Nul"
+    },
     "mediaStatus": "Statut du média",
     "dateAdded": "Date d'ajout",
     "genre": "Genre",
@@ -430,9 +446,9 @@
     "dragPasteClick": "Glissez · Collez · Cliquez",
     "imageFormats": "JPG · PNG · WebP",
     "firstIsCover": "La première est la couverture. Glissez pour réorganiser.",
-    "notesAndPoints": "Notes et points",
+    "attachmentDropHint": "Glisser des fichiers ici ou cliquer pour parcourir — sauvegardes, configurations, ebooks, archives...",
     "infoGroup": "Informations",
-    "ratingAndReview": "Note & Avis",
+    "ratingAndReview": "Note & Points",
     "others": "Autres",
     "positivePlaceholder": "Ce que vous avez aimé...",
     "negativePlaceholder": "Ce qui pourrait être amélioré...",
@@ -477,13 +493,29 @@
     "noMediaFound": "Aucun média trouvé",
     "typeToSearch": "Tapez pour rechercher…",
     "escapeKey": "Échap",
-    "dropFilesHere": "Déposer les fichiers ici"
+    "navigateHint": "naviguer",
+    "selectHint": "sélectionner",
+    "cancelHint": "annuler",
+    "mediaMentionTitle": "Média",
+    "mediaMentionHint": "Lier un média (Ctrl+M)",
+    "dropFilesHere": "Déposer les fichiers ici",
+    "matchingAndFilters": "MATCHING & FILTRES ({{count}}/9)",
+    "matchingHint": "Ces 9 premiers genres définissent les recommandations d'œuvres similaires.",
+    "noPrimaryGenre": "Aucun genre principal",
+    "filtersOnly": "FILTRES UNIQUEMENT ({{count}}/6)",
+    "filtersHint": "Au-delà de 9, ces genres servent uniquement pour les filtres et la recherche.",
+    "noSecondaryGenre": "Aucun genre secondaire",
+    "moreResults_one": "{{count}} autre résultat — affinez votre recherche",
+    "moreResults_other": "{{count}} autres résultats — affinez votre recherche",
+    "createGenre": "Créer « {{name}} »",
+    "createPerson": "Créer la personne « {{name}} »"
   },
   "profileSelect": {
     "whoIsWatching": "Qui regarde ?",
     "selectProfile": "Sélectionnez votre profil pour continuer"
   },
   "navigation": {
+    "dashboard": "Tableau de bord",
     "library": "Bibliothèque",
     "stats": "Statistiques",
     "genres": "Genres",
@@ -516,6 +548,51 @@
     "monthlyReport": "Bilan mensuel",
     "filterByType": "Filtrer par type",
     "filter": "Filtre",
+    "none": "Aucune notification",
+    "rules": {
+      "stagnantMedia": {
+        "title": "{{title}} stagne",
+        "message": "Cette œuvre est en cours depuis {{days}} jours sans progression."
+      },
+      "waitingMedia": {
+        "title": "{{title}} attend",
+        "message": "Cette œuvre est dans la liste « à commencer » depuis {{days}} jours."
+      },
+      "nearCompletion": {
+        "title": "{{title}} bientôt terminée !",
+        "message": "Tu es à {{progress}}% de cette œuvre. Continue comme ça !"
+      },
+      "objectiveDeadline": {
+        "title": "Objectif en retard",
+        "message": "Deadline dans {{days}} jours et seulement {{progress}}% complété."
+      },
+      "objectiveStalled": {
+        "title": "Objectif au point mort",
+        "message": "Tu es à mi-chemin de la période et n'as pas encore commencé cet objectif."
+      },
+      "objectiveAchieved": {
+        "title": "🎉 Objectif atteint !",
+        "message": "Félicitations ! Tu as atteint ton objectif de {{count}} œuvres."
+      },
+      "monthlyReport": {
+        "title": "Bilan {{month}} {{year}}",
+        "message": "{{completed}} œuvres terminées, {{abandoned}} abandonnées. Note moyenne : {{rating}}/100"
+      },
+      "months": {
+        "january": "Janvier",
+        "february": "Février",
+        "march": "Mars",
+        "april": "Avril",
+        "may": "Mai",
+        "june": "Juin",
+        "july": "Juillet",
+        "august": "Août",
+        "september": "Septembre",
+        "october": "Octobre",
+        "november": "Novembre",
+        "december": "Décembre"
+      }
+    },
     "dateGroups": {
       "today": "Aujourd'hui",
       "yesterday": "Hier",
@@ -539,6 +616,9 @@
     }
   },
   "stats": {
+    "allCollections": "Toutes les collections",
+    "allTime": "Toute la période",
+    "customPeriod": "Période perso.",
     "noRatedMedia": "Aucun média noté",
     "media": "Médias",
     "finished": "terminé",
@@ -565,6 +645,9 @@
     "mediaCompleted": "Médias terminés",
     "outOf": "sur",
     "activityOverTime": "Activité dans le temps",
+    "allYears": "Toutes les années",
+    "clickYearHint": "Cliquez sur une année pour voir le détail par mois",
+    "clickMonthHint": "Cliquez sur un mois pour voir le détail par jour",
     "noCompletedThisPeriod": "Aucun média terminé dans cette période",
     "seasonality": "Saisonnalité",
     "seasonalityHint": "Médias terminés par mois — toutes les années confondues",
@@ -654,7 +737,10 @@
     "descriptions": {
       "fieldDisplay": "Lors de la création d'un média dans cette collection, le champ s'affichera comme :",
       "displayedFields": "Champs affichés :",
-      "trackingDisplay": "Suivi dans la page média : ... — Diminutif sur la carte :",
+      "trackingDisplayPrefix": "Suivi dans la page média :",
+      "trackingDisplaySeparator": "— Diminutif sur la carte :",
+      "currentSuffix": "actuel",
+      "objectivesDisplay": "Affiché dans les objectifs :",
       "mediaPageDisplay": "Affiché dans la page média pour :",
       "monthlyCapacity": "Vous pouvez {{verb}} environ {{count}} {{name}} par mois",
       "linearCalculation": "Laissez vide pour un calcul linéaire dans les objectifs"
@@ -670,6 +756,7 @@
       "creatorExamples": "Ex: Réalisateur, Auteur, Développeur, Artiste...",
       "experienceDate": "Ex: Date de visionnage...",
       "shortLabel": "Ex: Ep, Chap, H...",
+      "progressionExamples": "Ex: Épisode, Chapitre, Heure, Piste...",
       "durationExamples": "Ex: Durée, Épisodes, Chapitres, Heures...",
       "consumptionVerb": "Ex: Lire, Regarder, Jouer, Écouter...",
       "capacity": "Ex: 4, 8, 15..."
@@ -903,7 +990,9 @@
     "startDateLabel": "Date de début",
     "endDateLabel": "Date de fin",
     "editObjective": "Modifier l'objectif",
+    "editObjectiveSubtitle": "Modifiez les paramètres de votre objectif",
     "newObjective": "Nouvel objectif",
+    "newObjectiveSubtitle": "Définissez un objectif pour suivre votre progression",
     "createObjective": "Créer l'objectif",
     "previewFrom": "du",
     "previewTo": "au"
@@ -1031,6 +1120,126 @@
     "errorTitle": "Erreur de lecture",
     "loading": "Chargement...",
     "updateProgressPrompt": "Vous avez terminé la lecture de {{filename}}. Souhaitez-vous mettre à jour votre progression à {{progress}} ?",
-    "updateProgressTitle": "Mettre à jour la progression ?"
+    "updateProgressTitle": "Mettre à jour la progression ?",
+    "skip": "Passer",
+    "update": "Mettre à jour"
+  },
+  "tutorial": {
+    "badge": "Nouveau ici ? Découvrir Logia",
+    "skip": "Passer le tutoriel",
+    "previous": "Précédent",
+    "next": "Suivant",
+    "done": "Terminer",
+    "dontShowAgain": "Ne plus afficher",
+    "step": "Étape {{current}}/{{total}}",
+    "actionRequired": "Action requise",
+    "clickToContinue": "Cliquez sur l'élément surligné pour continuer",
+    "phases": {
+      "gettingStarted": "Démarrage",
+      "collectionSetup": "Création de collection",
+      "mediaCreation": "Création de média"
+    },
+    "steps": {
+      "welcome": {
+        "title": "Bienvenue sur Logia",
+        "desc": "Logia vous aide à organiser et suivre vos collections de médias. Ce tutoriel rapide vous guidera pour créer votre première collection et ajouter un média. C'est parti !"
+      },
+      "goToLibrary": {
+        "title": "Accéder à votre bibliothèque",
+        "desc": "Cliquez sur \"Bibliothèque\" dans la barre de navigation pour accéder à vos collections."
+      },
+      "libraryNewCollection": {
+        "title": "Créer une collection",
+        "desc": "Survolez la barre des collections : un bouton « + » apparaît automatiquement. Cliquez dessus pour créer votre première collection."
+      },
+      "collectionName": {
+        "title": "Nommez votre collection",
+        "desc": "Choisissez un nom parlant pour votre collection (par exemple : Films, Séries, Manga, Livres...)."
+      },
+      "collectionDynamicIntro": {
+        "title": "Les champs dynamiques",
+        "desc": "Ici, vous pouvez personnaliser les labels affichés partout dans l'application. Au lieu de termes génériques comme « Créateur » ou « Date », chaque collection s'adapte à son contenu (« Auteur » pour des livres, « Réalisateur » pour des films, etc.). Nous verrons chaque champ dans les prochaines étapes."
+      },
+      "collectionCreator": {
+        "title": "Le label créateur",
+        "desc": "Ce champ définit comment le créateur est nommer. Par exemple : « Auteur » pour des livres, « Réalisateur » pour des films, ou « Studio » pour des séries. Vous pouvez le laisser vide pour utiliser la valeur par défaut."
+      },
+      "collectionDates": {
+        "title": "Les champs de dates",
+        "desc": "Deux labels de dates sont personnalisables : la date d'expérience (première fois) et la date de nouvelle expérience (relecture/revisionnage). Par exemple « Date de lecture » et « Date de relecture » pour des livres, ou « Date de visionnage » pour des films."
+      },
+      "collectionProgression": {
+        "title": "Le label de progression",
+        "desc": "Définissez l'unité de progression adaptée à votre média : « Épisode » pour des séries, « Chapitre » pour des livres, ou « Tome » pour des mangas. Le label court est utilisé dans les espaces restreints (ex. « Ép »)."
+      },
+      "collectionAdvanced": {
+        "title": "Options avancées",
+        "desc": "Personnalisez la durée totale (ex. « Runtime » ou « Pages »), le verbe de consommation pour vos objectifs (ex. « Regarder » ou « Lire »), ainsi que votre capacité mensuelle optionnelle."
+      },
+      "collectionVisual": {
+        "title": "Personnalisation visuelle",
+        "desc": "L'aperçu en haut vous montre le rendu direct. En dessous, choisissez une couleur et une icône pour identifier rapidement votre collection dans la bibliothèque."
+      },
+      "collectionSave": {
+        "title": "Sauvegarder votre collection",
+        "desc": "Cliquez sur Enregistrer pour créer votre collection. Vous pourrez toujours modifier ces paramètres plus tard."
+      },
+      "libraryAddMedia": {
+        "title": "Ajouter votre premier média",
+        "desc": "Cliquez sur \"Nouveau\" pour créer votre premier média dans cette collection."
+      },
+      "mediaCollectionDropdown": {
+        "title": "Choisir une collection",
+        "desc": "Sélectionnez la collection à laquelle rattacher votre média. Vous pouvez également en créer une nouvelle directement depuis ce menu."
+      },
+      "mediaTitle": {
+        "title": "Nommer votre média",
+        "desc": "Indiquez le titre de votre média. C'est l'un des rares champs obligatoires avec le choix de la collection."
+      },
+      "mediaCreator": {
+        "title": "Le créateur",
+        "desc": "Indiquez l'auteur, le réalisateur ou le studio. Des suggestions automatiques apparaîtront au fil de vos saisies."
+      },
+      "mediaStatusDate": {
+        "title": "Statut et date de sortie",
+        "desc": "Précisez si le média est à venir, en cours ou terminé, puis indiquez sa date de sortie officielle."
+      },
+      "mediaSynopsis": {
+        "title": "Le synopsis",
+        "desc": "Rédigez une description ou un résumé. Vous pouvez utiliser le formatage Markdown pour structurer votre texte."
+      },
+      "mediaCover": {
+        "title": "Aperçu de la couverture",
+        "desc": "Cet encadré affiche l'image de couverture. Les images s'ajoutent dans la section Galerie plus bas, et la première servira de couverture (cliquez pour la recadrer)."
+      },
+      "mediaGenres": {
+        "title": "Les genres",
+        "desc": "Associez des genres à votre média pour faciliter les filtres et affiner les recommandations de contenus similaires."
+      },
+      "mediaProgress": {
+        "title": "La progression",
+        "desc": "Suivez votre avancée grâce au statut, au compteur actuel (ex. épisode ou chapitre) et au total. Ajoutez vos dates d'expérience pour conserver un historique."
+      },
+      "mediaReview": {
+        "title": "L'avis détaillé",
+        "desc": "Rédigez une critique détaillée avec le formatage Markdown, ou insérez un modèle d'avis prédéfini."
+      },
+      "mediaRating": {
+        "title": "Note et points forts/faibles",
+        "desc": "Attribuez une note sur 100 et listez vos points positifs ainsi que vos axes d'amélioration."
+      },
+      "mediaGallery": {
+        "title": "La galerie d'images",
+        "desc": "Ajoutez jusqu'à 12 images par média par glisser-déposer ou via le presse-papiers. Réorganisez-les ensuite facilement."
+      },
+      "mediaAttachments": {
+        "title": "Les fichiers joints",
+        "desc": "Attachez des fichiers complémentaires (sauvegardes, ebooks, archives) pour tout centraliser au même endroit."
+      },
+      "mediaCreate": {
+        "title": "Créer votre premier média",
+        "desc": "Vérifiez vos informations et enregistrez. Félicitations, vous êtes prêt !"
+      }
+    }
   }
 }

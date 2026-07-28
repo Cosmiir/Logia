@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
   Sparkles, 
@@ -23,6 +23,7 @@ import ContextMenu from '@/components/ContextMenu';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import ObjectiveCard from '@/components/ObjectiveCard';
 import { UnifiedStatsCard } from '@/components/UnifiedStatsCard';
+import { useTutorialStore } from '@/stores/useTutorialStore';
 import { useNavigationStore } from '@/stores/useNavigationStore';
 import { getProgressStatus } from '@/lib/utils';
 import { useCollections } from '@/hooks/useCollections';
@@ -85,6 +86,22 @@ const Dashboard: React.FC = () => {
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
   const { data: objectives = [] } = useObjectives();
   const deleteObjectiveMutation = useDeleteObjective();
+
+  // Auto-start tutorial on first Dashboard visit after onboarding
+  const startTutorial = useTutorialStore((s) => s.startTutorial);
+  const tutorialIsActive = useTutorialStore((s) => s.isActive);
+  const justFinishedOnboarding = useTutorialStore((s) => s.justFinishedOnboarding);
+  const setJustFinishedOnboarding = useTutorialStore((s) => s.setJustFinishedOnboarding);
+
+  useEffect(() => {
+    if (justFinishedOnboarding && !tutorialIsActive) {
+      const timeout = setTimeout(() => {
+        startTutorial();
+        setJustFinishedOnboarding(false);
+      }, 800);
+      return () => clearTimeout(timeout);
+    }
+  }, [justFinishedOnboarding, tutorialIsActive, startTutorial, setJustFinishedOnboarding]);
 
   const confirmDeleteObjective = useCallback(async () => {
     if (objectiveToDelete === null) return;
@@ -266,7 +283,7 @@ const Dashboard: React.FC = () => {
           {/* Colonne droite */}
           <div className="lg:col-span-1 space-y-6">
             {/* Collections */}
-            <div className="glass-card-opaque rounded-xl p-6">
+            <div className="glass-card-opaque rounded-xl p-6" data-tutorial="collections-section">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
                   <FolderOpen className="w-6 h-6 text-flashy-blue" />
@@ -276,6 +293,7 @@ const Dashboard: React.FC = () => {
                   onClick={() => navigateToCollectionEdit()}
                   className="p-1.5 rounded-lg hover:bg-white/10 text-text-secondary hover:text-white transition-colors cursor-pointer"
                   title={t('dashboard.newCollection')}
+                  data-tutorial="create-collection-btn"
                 >
                   <Plus className="w-5 h-5" />
                 </button>
@@ -284,12 +302,13 @@ const Dashboard: React.FC = () => {
                 <button
                   onClick={() => navigateToCollectionEdit()}
                   className="w-full py-8 flex flex-col items-center gap-2 text-text-secondary hover:text-white transition-colors cursor-pointer"
+                  data-tutorial="create-collection-btn"
                 >
                   <Plus className="w-8 h-8" />
                   <span className="text-sm">{t('dashboard.createCollection')}</span>
                 </button>
               ) : (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3" data-tutorial="collections-grid">
                   {collections.map((collection) => {
                     const Icon = getCollectionIconComponent(collection.name, collection.icon);
                     const collColor = collection.color || getCollectionColor(collection.name);

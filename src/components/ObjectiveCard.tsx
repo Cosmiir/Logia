@@ -108,7 +108,7 @@ const ObjectiveCard: React.FC<ObjectiveCardProps> = ({
 
   const collColor = collection?.color || '#8B5CF6';
   const collName = collection?.name || 'Collection';
-  const verb = collection?.consumption_verb || 'Consommer';
+  const verb = collection?.consumption_verb || t('common.consume');
   const Icon = getCollectionIconComponent(collName, collection?.icon ?? null);
 
   const statusConfig = {

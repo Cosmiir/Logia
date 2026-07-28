@@ -67,6 +67,12 @@ export interface SettingsState {
   // Library View Mode
   libraryViewMode: 'grid' | 'list';
   setLibraryViewMode: (viewMode: 'grid' | 'list') => void;
+
+  // Tutorial
+  tutorialHasSeenInvitation: boolean;
+  tutorialHasCompleted: boolean;
+  setTutorialHasSeenInvitation: (seen: boolean) => void;
+  setTutorialHasCompleted: (completed: boolean) => void;
 }
 
 /* ================================================================== */
@@ -103,6 +109,9 @@ const DEFAULT_WINDOW: WindowState = {
 
 const DEFAULT_LANGUAGE = 'en';
 
+const DEFAULT_TUTORIAL_SEEN = false;
+const DEFAULT_TUTORIAL_COMPLETED = false;
+
 const validVariants: LogoVariant[] = ['classic', 'glow', 'split', 'tight', 'dot', 'fade'];
 
 // Helper to hydrate store from backend settings
@@ -136,6 +145,12 @@ export const hydrateStoreFromBackend = async (_profileId: string, store: ReturnT
     }
     if (raw.language) {
       state.setLanguage(raw.language);
+    }
+    if (raw.tutorial_has_seen_invitation !== undefined) {
+      state.setTutorialHasSeenInvitation(raw.tutorial_has_seen_invitation === 'true');
+    }
+    if (raw.tutorial_has_completed !== undefined) {
+      state.setTutorialHasCompleted(raw.tutorial_has_completed === 'true');
     }
     if (raw.notification_prefs) {
       try {
@@ -296,6 +311,18 @@ const createSettingsStore = (profileId: string) => {
         setIsMaximized: (isMaximized) =>
           set((s) => ({ window: { ...s.window, isMaximized } })),
         
+        // --- Tutorial ---
+        tutorialHasSeenInvitation: DEFAULT_TUTORIAL_SEEN,
+        tutorialHasCompleted: DEFAULT_TUTORIAL_COMPLETED,
+        setTutorialHasSeenInvitation: (seen) => {
+          syncToBackend('tutorial_has_seen_invitation', seen);
+          set(() => ({ tutorialHasSeenInvitation: seen }));
+        },
+        setTutorialHasCompleted: (completed) => {
+          syncToBackend('tutorial_has_completed', completed);
+          set(() => ({ tutorialHasCompleted: completed }));
+        },
+
         // --- Library View Mode ---
         libraryViewMode: 'grid',
         setLibraryViewMode: (viewMode) => {
@@ -324,6 +351,8 @@ const createSettingsStore = (profileId: string) => {
           language: state.language,
           notifications: state.notifications,
           libraryViewMode: state.libraryViewMode,
+          tutorialHasSeenInvitation: state.tutorialHasSeenInvitation,
+          tutorialHasCompleted: state.tutorialHasCompleted,
           // window intentionally excluded — runtime state only
         }),
       }

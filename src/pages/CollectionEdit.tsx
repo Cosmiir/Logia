@@ -23,6 +23,7 @@ import SharedHeader from '@/components/SharedHeader';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import ColorPicker from '@/components/ColorPicker';
 import { useNavigationStore } from '@/stores/useNavigationStore';
+import { useTutorialStore, isTutorialSectionLocked } from '@/stores/useTutorialStore';
 import {
   useCollection,
   useCreateCollection,
@@ -33,7 +34,6 @@ import {
 import {
   COLLECTION_ICONS,
   COLLECTION_COLORS,
-  getPresetLabels,
   getIconById,
 } from '@/lib/collection-icons';
 import { getCollectionIconComponent } from '@/components/CollectionIcons';
@@ -147,8 +147,11 @@ const CollectionEdit: React.FC = () => {
     return () => setBeforeNavigate(null);
   }, [setBeforeNavigate]);
 
-  // Get suggested placeholders based on collection name
-  const presetLabels = useMemo(() => getPresetLabels(name.trim()), [name]);
+  const creatorLocked = useTutorialStore(isTutorialSectionLocked('creator'));
+  const datesLocked = useTutorialStore(isTutorialSectionLocked('dates'));
+  const progressionLocked = useTutorialStore(isTutorialSectionLocked('progression'));
+  const advancedLocked = useTutorialStore(isTutorialSectionLocked('advanced'));
+  const visualLocked = useTutorialStore(isTutorialSectionLocked('visual'));
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
   
@@ -160,34 +163,34 @@ const CollectionEdit: React.FC = () => {
 
     try {
       if (isEditing && editingId) {
-        const finalProgressionLabel = progressionLabel.trim() || presetLabels?.progression_label || t('collectionEdit.defaults.episode');
+        const finalProgressionLabel = progressionLabel.trim() || t('collectionEdit.defaults.episode');
         await updateMutation.mutateAsync({
           collection_id: editingId,
           name: name.trim(),
           icon: iconId,
           color,
-          creator_label: creatorLabel.trim() || presetLabels?.creator_label || t('collectionEdit.defaults.creator'),
-          date_label: dateLabel.trim() || presetLabels?.date_label || t('collectionEdit.defaults.experienceDate'),
+          creator_label: creatorLabel.trim() || t('collectionEdit.defaults.creator'),
+          date_label: dateLabel.trim() || t('collectionEdit.defaults.experienceDate'),
           progression_label: finalProgressionLabel,
           progression_short_label: progressionShortLabel.trim() || finalProgressionLabel,
           replay_date_label: replayDateLabel.trim() || undefined,
-          duration_label: durationLabel.trim() || presetLabels?.duration_label || undefined,
+          duration_label: durationLabel.trim() || undefined,
           plural_with_s: pluralWithS,
           consumption_verb: consumptionVerb.trim() || undefined,
           monthly_capacity: monthlyCapacity.trim() ? Number(monthlyCapacity) : undefined,
         });
       } else {
-        const finalProgressionLabel = progressionLabel.trim() || presetLabels?.progression_label || t('collectionEdit.defaults.episode');
+        const finalProgressionLabel = progressionLabel.trim() || t('collectionEdit.defaults.episode');
         await createMutation.mutateAsync({
           name: name.trim(),
           icon: iconId,
           color,
-          creator_label: creatorLabel.trim() || presetLabels?.creator_label || t('collectionEdit.defaults.creator'),
-          date_label: dateLabel.trim() || presetLabels?.date_label || t('collectionEdit.defaults.experienceDate'),
+          creator_label: creatorLabel.trim() || t('collectionEdit.defaults.creator'),
+          date_label: dateLabel.trim() || t('collectionEdit.defaults.experienceDate'),
           progression_label: finalProgressionLabel,
           progression_short_label: progressionShortLabel.trim() || finalProgressionLabel,
           replay_date_label: replayDateLabel.trim() || undefined,
-          duration_label: durationLabel.trim() || presetLabels?.duration_label || undefined,
+          duration_label: durationLabel.trim() || undefined,
           plural_with_s: pluralWithS,
           consumption_verb: consumptionVerb.trim() || undefined,
           monthly_capacity: monthlyCapacity.trim() ? Number(monthlyCapacity) : undefined,
@@ -278,6 +281,7 @@ const CollectionEdit: React.FC = () => {
             <button
               onClick={handleSave}
               disabled={!canSave || isSaving}
+              data-tutorial="collection-save-btn"
               className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary/80 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(217,70,239,0.25)]"
             >
               {isSaving ? (
@@ -302,16 +306,11 @@ const CollectionEdit: React.FC = () => {
                 onChange={(e) => setName(e.target.value)}
                 placeholder={t('collectionEdit.namePlaceholder')}
                 maxLength={50}
+                data-tutorial="collection-name-input"
                 className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-text-secondary focus:outline-none focus:border-primary/50 transition-colors text-sm"
               />
               {name.trim().length > 0 && (
                 <div className="mt-2 flex items-center gap-2">
-                  {presetLabels && !isEditing && (
-                    <span className="inline-flex items-center gap-1 text-[10px] text-primary bg-primary/10 px-2 py-1 rounded-full">
-                      <Sparkles className="w-3 h-3" />
-                      {t('collectionEdit.suggestedLabels')}
-                    </span>
-                  )}
                   <span className="text-[10px] text-text-secondary ml-auto">
                     {name.trim().length}/50
                   </span>
@@ -325,8 +324,8 @@ const CollectionEdit: React.FC = () => {
             </div>
 
             {/* Dynamic Labels */}
-            <div className="glass-card rounded-2xl p-6 space-y-6">
-            <div>
+            <div className="glass-card rounded-2xl p-6 space-y-6" data-tutorial="collection-dynamic-fields">
+            <div data-tutorial="collection-creator-section" className={creatorLocked ? 'pointer-events-none opacity-60' : ''}>
               <SectionLabel
                 icon={UserPen}
                 label={t('collectionEdit.creatorFieldName')}
@@ -336,16 +335,17 @@ const CollectionEdit: React.FC = () => {
                 type="text"
                 value={creatorLabel}
                 onChange={(e) => setCreatorLabel(e.target.value)}
-                placeholder={presetLabels?.creator_label || t('collectionEdit.placeholders.creatorExamples')}
+                placeholder={t('collectionEdit.placeholders.creatorExamples')}
                 maxLength={50}
+                data-tutorial="collection-creator-input"
                 className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-text-secondary focus:outline-none focus:border-primary/50 transition-colors text-sm"
               />
               <p className="mt-2 text-[11px] text-text-secondary">
-                {t('collectionEdit.descriptions.fieldDisplay')} <span className="text-white/70 font-medium">« {creatorLabel || presetLabels?.creator_label || t('collectionEdit.defaults.creator')} »</span>
+                {t('collectionEdit.descriptions.fieldDisplay')} <span className="text-white/70 font-medium">« {creatorLabel || t('collectionEdit.defaults.creator')} »</span>
               </p>
             </div>
 
-            <div className="border-t border-white/5 pt-6">
+            <div className={`border-t border-white/5 pt-6 ${datesLocked ? 'pointer-events-none opacity-60' : ''}`} data-tutorial="collection-dates-section">
               <SectionLabel
                 icon={CalendarClock}
                 label={t('collectionEdit.dateFields')}
@@ -358,7 +358,7 @@ const CollectionEdit: React.FC = () => {
                     type="text"
                     value={dateLabel}
                     onChange={(e) => setDateLabel(e.target.value)}
-                    placeholder={presetLabels?.date_label || t('collectionEdit.placeholders.experienceDate')}
+                    placeholder={t('collectionEdit.placeholders.experienceDate')}
                     maxLength={80}
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-text-secondary focus:outline-none focus:border-primary/50 transition-colors text-sm"
                   />
@@ -376,11 +376,11 @@ const CollectionEdit: React.FC = () => {
                 </div>
               </div>
               <p className="mt-2 text-[11px] text-text-secondary">
-                {t('collectionEdit.descriptions.displayedFields')} <span className="text-white/70 font-medium">« {dateLabel || presetLabels?.date_label || t('collectionEdit.defaults.experienceDate')} »</span> et <span className="text-white/70 font-medium">« {replayDateLabel || t('collectionEdit.defaults.newExperience')} »</span>
+                {t('collectionEdit.descriptions.displayedFields')} <span className="text-white/70 font-medium">« {dateLabel || t('collectionEdit.defaults.experienceDate')} »</span> et <span className="text-white/70 font-medium">« {replayDateLabel || t('collectionEdit.defaults.newExperience')} »</span>
               </p>
             </div>
 
-            <div className="border-t border-white/5 pt-6">
+            <div className={`border-t border-white/5 pt-6 ${progressionLocked ? 'pointer-events-none opacity-60' : ''}`} data-tutorial="collection-progression-section">
               <SectionLabel
                 icon={ListOrdered}
                 label={t('collectionEdit.progressionFieldName')}
@@ -393,7 +393,7 @@ const CollectionEdit: React.FC = () => {
                     type="text"
                     value={progressionLabel}
                     onChange={(e) => setProgressionLabel(e.target.value)}
-                    placeholder={presetLabels?.progression_label || 'Ex: Episode, Chapter...'}
+                    placeholder={t('collectionEdit.placeholders.progressionExamples')}
                     maxLength={50}
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-text-secondary focus:outline-none focus:border-primary/50 transition-colors text-sm"
                   />
@@ -404,14 +404,14 @@ const CollectionEdit: React.FC = () => {
                     type="text"
                     value={progressionShortLabel}
                     onChange={(e) => setProgressionShortLabel(e.target.value)}
-                    placeholder={progressionLabel.trim() || presetLabels?.progression_label || t('collectionEdit.placeholders.shortLabel')}
+                    placeholder={progressionLabel.trim() || t('collectionEdit.placeholders.shortLabel')}
                     maxLength={20}
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-text-secondary focus:outline-none focus:border-primary/50 transition-colors text-sm"
                   />
                 </div>
               </div>
               <p className="mt-2 text-[11px] text-text-secondary">
-                {t('collectionEdit.descriptions.trackingDisplay').replace('...', `<span className="text-white/70 font-medium">« ${progressionLabel || presetLabels?.progression_label || t('collectionEdit.defaults.episode')} actuel »</span>`)} <span className="text-white/70 font-medium">« {progressionShortLabel.trim() || progressionLabel.trim() || presetLabels?.progression_label || t('collectionEdit.defaults.episode')} »</span>
+                {t('collectionEdit.descriptions.trackingDisplayPrefix')} <span className="text-white/70 font-medium">« {progressionLabel || t('collectionEdit.defaults.episode')} {t('collectionEdit.descriptions.currentSuffix')} »</span> {t('collectionEdit.descriptions.trackingDisplaySeparator')} <span className="text-white/70 font-medium">« {progressionShortLabel.trim() || progressionLabel.trim() || t('collectionEdit.defaults.episode')} »</span>
               </p>
               <div className="mt-4 flex items-center justify-between">
                 <div>
@@ -430,6 +430,7 @@ const CollectionEdit: React.FC = () => {
               </div>
             </div>
 
+            <div className={`space-y-6 ${advancedLocked ? 'pointer-events-none opacity-60' : ''}`} data-tutorial="collection-advanced-section">
             <div className="border-t border-white/5 pt-6">
               <SectionLabel
                 icon={Clock}
@@ -440,12 +441,12 @@ const CollectionEdit: React.FC = () => {
                 type="text"
                 value={durationLabel}
                 onChange={(e) => setDurationLabel(e.target.value)}
-                placeholder={presetLabels?.duration_label || t('collectionEdit.placeholders.durationExamples')}
+                placeholder={t('collectionEdit.placeholders.durationExamples')}
                 maxLength={50}
                 className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-text-secondary focus:outline-none focus:border-primary/50 transition-colors text-sm"
               />
               <p className="mt-2 text-[11px] text-text-secondary">
-                {t('collectionEdit.descriptions.mediaPageDisplay')} <span className="text-white/70 font-medium">« {durationLabel || presetLabels?.duration_label || t('collectionEdit.defaults.total')} »</span>
+                {t('collectionEdit.descriptions.mediaPageDisplay')} <span className="text-white/70 font-medium">« {durationLabel || t('collectionEdit.defaults.total')} »</span>
               </p>
             </div>
 
@@ -464,7 +465,7 @@ const CollectionEdit: React.FC = () => {
                 className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-text-secondary focus:outline-none focus:border-primary/50 transition-colors text-sm"
               />
               <p className="mt-2 text-[11px] text-text-secondary">
-                Affiché dans les objectifs : <span className="text-white/70 font-medium">« {consumptionVerb.trim() || 'Consommer'} 20 {name.trim().toLowerCase() || 'médias'} »</span>
+                {t('collectionEdit.descriptions.objectivesDisplay')} <span className="text-white/70 font-medium">« {consumptionVerb.trim() || t('common.consume')} 20 {name.trim().toLowerCase() || t('common.media')} »</span>
               </p>
             </div>
 
@@ -485,15 +486,16 @@ const CollectionEdit: React.FC = () => {
               />
               <p className="mt-2 text-[11px] text-text-secondary">
                 {monthlyCapacity.trim()
-                  ? <>{t('collectionEdit.capacityHint', { verb: consumptionVerb.trim().toLowerCase() || 'consommer', count: monthlyCapacity, name: name.trim().toLowerCase() || 'médias' })}</>
+                  ? <>{t('collectionEdit.capacityHint', { verb: consumptionVerb.trim().toLowerCase() || t('common.consume').toLowerCase(), count: monthlyCapacity, name: name.trim().toLowerCase() || t('common.media') })}</>
                   : <>{t('collectionEdit.capacityEmptyHint')}</>}
               </p>
+            </div>
             </div>
           </div>
           </div>
 
           {/* RIGHT COLUMN (1/3) - Visual elements */}
-          <div className="lg:col-span-1 space-y-6">
+          <div className={`lg:col-span-1 space-y-6 ${visualLocked ? 'pointer-events-none opacity-60' : ''}`} data-tutorial="collection-visual-column">
             {/* Live Preview Card */}
             <div className="glass-card rounded-2xl p-6">
               <div className="flex items-center gap-2 mb-4">
@@ -516,10 +518,10 @@ const CollectionEdit: React.FC = () => {
                     {name.trim() || t('collectionEdit.preview.defaultName')}
                   </h3>
                   <div className="flex items-center gap-3 mt-1 text-[11px] text-text-secondary">
-                    <span className="truncate">{creatorLabel || presetLabels?.creator_label || t('collectionEdit.defaults.creator')} : ...</span>
+                    <span className="truncate">{creatorLabel || t('collectionEdit.defaults.creator')} : ...</span>
                   </div>
                   <div className="flex items-center gap-3 mt-0.5 text-[11px] text-text-secondary">
-                    <span className="truncate">{progressionLabel || presetLabels?.progression_label || t('collectionEdit.defaults.episode')} : 0/??</span>
+                    <span className="truncate">{progressionLabel || t('collectionEdit.defaults.episode')} : 0/??</span>
                   </div>
                 </div>
               </div>

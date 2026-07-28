@@ -6,7 +6,7 @@ import SharedHeader from '@/components/SharedHeader';
 import { useActiveProfile } from '@/hooks/useProfiles';
 import { useNotifications, useMarkAsRead, useMarkAllAsRead, useDeleteNotification } from '@/hooks/useNotifications';
 import { useNavigationStore } from '@/stores/useNavigationStore';
-import { notificationStyles, formatDate, formatDateLong } from '@/lib/notificationConfig';
+import { notificationStyles, formatDate, formatDateLong, getNotificationDisplay } from '@/lib/notificationConfig';
 import type { Notification, NotificationType } from '@/types';
 
 type FilterType = 'all' | 'unread';
@@ -307,6 +307,7 @@ const Notifications: React.FC = () => {
                     const bgColor = style?.bgColor ?? 'bg-white/5';
                     const iconColor = style?.color ?? 'text-text-secondary';
                     const accentHex = style?.accentHex ?? '#888';
+                    const { title: displayTitle, message: displayMessage } = getNotificationDisplay(notification);
 
                     return (
                       <div
@@ -337,7 +338,7 @@ const Notifications: React.FC = () => {
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2">
                                 <h3 className={`text-sm font-semibold truncate ${!notification.is_read ? 'text-white' : 'text-white/60'}`}>
-                                  {notification.title}
+                                  {displayTitle}
                                 </h3>
                                 {/* Type badge */}
                                 <span
@@ -352,7 +353,7 @@ const Notifications: React.FC = () => {
                                 </span>
                               </div>
                               <p className={`text-sm mt-1 ${!notification.is_read ? 'text-text-secondary' : 'text-white/30'}`}>
-                                {notification.message}
+                                {displayMessage}
                               </p>
                             </div>
 

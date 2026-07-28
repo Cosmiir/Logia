@@ -13,9 +13,10 @@ import {
   Users,
 } from 'lucide-react';
 import { useNavigationStore, type PageType } from '@/stores/useNavigationStore';
+import { useTutorialStore, TUTORIAL_STEPS } from '@/stores/useTutorialStore';
 import { useActiveProfile } from '@/hooks/useProfiles';
 import { useUnreadCount, useNotifications, useMarkAsRead, useMarkAllAsRead } from '@/hooks/useNotifications';
-import { notificationStyles, formatDate } from '@/lib/notificationConfig';
+import { notificationStyles, formatDate, getNotificationDisplay } from '@/lib/notificationConfig';
 import type { Notification } from '@/types';
 import { getDefaultAvatar } from '@/lib/default-avatars';
 import PillNavigation, { type PillNavigationItem } from '@/components/PillNavigation';
@@ -29,10 +30,34 @@ interface SharedHeaderProps {
 const SharedHeader: React.FC<SharedHeaderProps> = ({ activePage, disableLayoutAnimation }) => {
   const { t } = useTranslation();
 
+  const isTutorialActive = useTutorialStore((s) => s.isActive);
+  const currentStepIndex = useTutorialStore((s) => s.currentStep);
+  const currentStepDef = TUTORIAL_STEPS[currentStepIndex];
+
+  // Disable non-target navigation pills when tutorial requires specific page/target
+  const isNavTargeted = isTutorialActive && currentStepDef?.selector === '[data-tutorial="nav-library"]';
+  const isTutorialInFlow = isTutorialActive && currentStepDef?.page !== 'dashboard';
+
   const navItems: PillNavigationItem<PageType>[] = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'library', label: t('navigation.library'), icon: Library },
-    { id: 'stats', label: t('navigation.stats'), icon: BarChart3 },
+    {
+      id: 'dashboard',
+      label: t('navigation.dashboard'),
+      icon: LayoutDashboard,
+      disabled: isNavTargeted || isTutorialInFlow,
+    },
+    {
+      id: 'library',
+      label: t('navigation.library'),
+      icon: Library,
+      dataTutorial: 'nav-library',
+      disabled: isTutorialInFlow && activePage === 'library' && !isNavTargeted,
+    },
+    {
+      id: 'stats',
+      label: t('navigation.stats'),
+      icon: BarChart3,
+      disabled: isNavTargeted || isTutorialInFlow,
+    },
   ];
   const navigate = useNavigationStore((s) => s.navigate);
   const navigateToMediaDetail = useNavigationStore((s) => s.navigateToMediaDetail);
@@ -165,6 +190,7 @@ const SharedHeader: React.FC<SharedHeaderProps> = ({ activePage, disableLayoutAn
                     const bgColor = style?.bgColor ?? 'bg-white/5';
                     const iconColor = style?.color ?? 'text-text-secondary';
                     const accentHex = style?.accentHex ?? '#888';
+                    const { title: displayTitle, message: displayMessage } = getNotificationDisplay(notification);
                     
                     return (
                       <div
@@ -189,14 +215,14 @@ const SharedHeader: React.FC<SharedHeaderProps> = ({ activePage, disableLayoutAn
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
                             <h4 className={`text-xs font-semibold truncate ${!notification.is_read ? 'text-white' : 'text-white/50'}`}>
-                              {notification.title}
+                              {displayTitle}
                             </h4>
                             <span className="text-[10px] text-gray-500 shrink-0">
                               {formatDate(notification.created_at)}
                             </span>
                           </div>
                           <p className={`text-[11px] mt-0.5 line-clamp-1 ${!notification.is_read ? 'text-text-secondary' : 'text-white/25'}`}>
-                            {notification.message}
+                            {displayMessage}
                           </p>
                         </div>
                       </div>

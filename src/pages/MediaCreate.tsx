@@ -62,6 +62,7 @@ import CustomDatePicker from '@/components/CustomDatePicker';
 import LanguagePicker from '@/components/LanguagePicker';
 import GravityMarkdownEditor, { type GravityMarkdownEditorHandle } from '@/components/MarkdownEditor/GravityMarkdownEditor';
 import { useNavigationStore } from '@/stores/useNavigationStore';
+import { useTutorialStore, isTutorialSectionLocked } from '@/stores/useTutorialStore';
 import { useCollections } from '@/hooks/useCollections';
 import { useReviewTemplates } from '@/hooks/useReviewTemplates';
 import { usePeople } from '@/hooks/usePeople';
@@ -797,7 +798,7 @@ const GenreSelector: React.FC<{
   return (
     <div>
       <label className="block text-[11px] font-semibold text-white/40 uppercase tracking-wider mb-2">
-        Genres
+        {i18next.t('common.genres')}
       </label>
 
       {selectedGenres.length > 0 && (
@@ -813,11 +814,11 @@ const GenreSelector: React.FC<{
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold text-white/50 uppercase tracking-wider">
-                    MATCHING & FILTRES ({primaryGenres.length}/9)
+                    {i18next.t('mediaCreate.matchingAndFilters', { count: primaryGenres.length })}
                   </span>
                 </div>
                 <p className="text-[9px] text-white/35 italic leading-tight">
-                  Ces 9 premiers genres définissent les recommandations d'œuvres similaires.
+                  {i18next.t('mediaCreate.matchingHint')}
                 </p>
                 <SortableContext items={primaryGenres.map((g) => g.id)} strategy={rectSortingStrategy}>
                   <DroppableContainer id="primary-container" className="grid grid-cols-3 gap-1.5 p-2 rounded-xl border border-white/5 bg-white/[0.01] min-h-[50px] transition-all">
@@ -826,7 +827,7 @@ const GenreSelector: React.FC<{
                     ))}
                     {primaryGenres.length === 0 && (
                       <div className="col-span-3 flex items-center justify-center py-3 text-[10px] text-white/20 italic">
-                        Aucun genre principal
+                        {i18next.t('mediaCreate.noPrimaryGenre')}
                       </div>
                     )}
                   </DroppableContainer>
@@ -837,11 +838,11 @@ const GenreSelector: React.FC<{
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold text-white/50 uppercase tracking-wider">
-                    FILTRES UNIQUEMENT ({secondaryGenres.length}/6)
+                    {i18next.t('mediaCreate.filtersOnly', { count: secondaryGenres.length })}
                   </span>
                 </div>
                 <p className="text-[9px] text-white/35 italic leading-tight">
-                  Au-delà de 9, ces genres servent uniquement pour les filtres et la recherche.
+                  {i18next.t('mediaCreate.filtersHint')}
                 </p>
                 <SortableContext items={secondaryGenres.map((g) => g.id)} strategy={rectSortingStrategy}>
                   <DroppableContainer id="secondary-container" className="grid grid-cols-3 gap-1.5 p-2 rounded-xl border border-white/5 bg-white/[0.01] min-h-[50px] transition-all">
@@ -850,7 +851,7 @@ const GenreSelector: React.FC<{
                     ))}
                     {secondaryGenres.length === 0 && (
                       <div className="col-span-3 flex items-center justify-center py-3 text-[10px] text-white/20 italic">
-                        Aucun genre secondaire
+                        {i18next.t('mediaCreate.noSecondaryGenre')}
                       </div>
                     )}
                   </DroppableContainer>
@@ -914,7 +915,7 @@ const GenreSelector: React.FC<{
                 ))}
                 {remaining > 0 && (
                   <div className="px-4 py-2 text-[11px] text-white/30 border-t border-white/5 mx-1.5">
-                    {remaining} autre{remaining > 1 ? 's' : ''} résultat{remaining > 1 ? 's' : ''} — affinez votre recherche
+                    {i18next.t('mediaCreate.moreResults', { count: remaining })}
                   </div>
                 )}
                 {input.trim() && !filtered.some((s) => s.name.toLowerCase() === input.trim().toLowerCase()) && (
@@ -925,7 +926,7 @@ const GenreSelector: React.FC<{
                       className="w-full text-left px-3 py-2 text-sm text-primary hover:bg-primary/10 rounded-lg transition-all cursor-pointer flex items-center gap-2"
                     >
                       <Plus className="w-3.5 h-3.5" />
-                      Créer « {input.trim()} »
+                      {i18next.t('mediaCreate.createGenre', { name: input.trim() })}
                     </button>
                   </div>
                 )}
@@ -1259,7 +1260,7 @@ const CreditsSelector: React.FC<CreditsSelectorProps> = ({
                   className="w-full text-left px-3 py-2 text-sm text-primary hover:bg-primary/10 rounded-lg transition-all cursor-pointer flex items-center gap-2"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  Créer la personne « {input.trim()} »
+                  {i18next.t('mediaCreate.createPerson', { name: input.trim() })}
                 </button>
               </div>
             )}
@@ -1495,6 +1496,20 @@ const SortableAttachmentItem: React.FC<{
 const MediaCreate: React.FC = () => {
   const { t } = useTranslation();
   const { mediaCreateCollectionId, editingMediaId, goBack, setBeforeNavigate, forceNavigate, navigateToMediaDetail } = useNavigationStore();
+  const tutorialIsActive = useTutorialStore((s) => s.isActive);
+  const tutorialCurrentStep = useTutorialStore((s) => s.currentStep);
+  const tutorialBlockNewCollection = tutorialIsActive && tutorialCurrentStep === 12;
+  const titleLocked = useTutorialStore(isTutorialSectionLocked('mediaTitle'));
+  const creatorLocked = useTutorialStore(isTutorialSectionLocked('mediaCreator'));
+  const statusDateLocked = useTutorialStore(isTutorialSectionLocked('mediaStatusDate'));
+  const synopsisLocked = useTutorialStore(isTutorialSectionLocked('mediaSynopsis'));
+  const coverLocked = useTutorialStore(isTutorialSectionLocked('mediaCover'));
+  const genresLocked = useTutorialStore(isTutorialSectionLocked('mediaGenres'));
+  const progressLocked = useTutorialStore(isTutorialSectionLocked('mediaProgress'));
+  const reviewLocked = useTutorialStore(isTutorialSectionLocked('mediaReview'));
+  const ratingLocked = useTutorialStore(isTutorialSectionLocked('mediaRating'));
+  const galleryLocked = useTutorialStore(isTutorialSectionLocked('mediaGallery'));
+  const attachmentsLocked = useTutorialStore(isTutorialSectionLocked('mediaAttachments'));
   const queryClient = useQueryClient();
   const { data: collections } = useCollections();
   const { data: reviewTemplates } = useReviewTemplates();
@@ -2649,12 +2664,13 @@ const MediaCreate: React.FC = () => {
               disabled={isSubmitting || createMutation.isPending || updateMutation.isPending || isProcessingImages}
               className="px-5 py-2 text-sm text-text-secondary hover:text-white border border-white/10 rounded-xl hover:bg-white/5 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Annuler
+              {t('common.cancel')}
             </button>
             <button
               type="button"
               onClick={handleSubmit}
               disabled={isSubmitting || createMutation.isPending || updateMutation.isPending || isProcessingImages}
+              data-tutorial="media-save-btn"
               className="flex items-center gap-2 px-5 py-2 bg-primary hover:bg-primary-dark rounded-xl text-sm font-semibold text-white shadow-[0_0_15px_rgba(217,70,239,0.25)] hover:shadow-[0_0_20px_rgba(217,70,239,0.4)] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting || createMutation.isPending || updateMutation.isPending || isProcessingImages ? (
@@ -2663,8 +2679,8 @@ const MediaCreate: React.FC = () => {
                 <Save className="w-4 h-4" />
               )}
               {isProcessingImages || isSubmitting
-                ? (editingMediaId ? 'Enregistrement...' : 'Création...')
-                : editingMediaId ? 'Enregistrer' : 'Créer'}
+                ? (editingMediaId ? t('common.saving') : t('common.creating'))
+                : editingMediaId ? t('mediaCreate.save') : t('common.create')}
             </button>
           </div>
         </div>
@@ -2681,7 +2697,7 @@ const MediaCreate: React.FC = () => {
 
               <div className="flex gap-6">
                 {/* Cover image area */}
-                <div className="shrink-0">
+                <div className={`shrink-0 ${coverLocked ? 'pointer-events-none opacity-60' : ''}`} data-tutorial="media-cover">
                   <div
                     className="w-[140px] aspect-[2/3] rounded-xl overflow-hidden border border-white/10 bg-white/5 relative group cursor-pointer"
                     onClick={() => { if (coverImage) setShowCoverCrop(true); }}
@@ -2716,7 +2732,7 @@ const MediaCreate: React.FC = () => {
                 {/* Fields */}
                 <div className="flex-1 space-y-4 min-w-0">
                   {/* Collection — inline dropdown */}
-                  <div ref={collectionDropdownRef} className="relative">
+                  <div ref={collectionDropdownRef} className="relative" data-tutorial="media-collection-dropdown">
                     <label className="block text-[11px] font-semibold text-white/40 uppercase tracking-wider mb-1.5">{t('common.collection')} <span className="text-red-400">*</span></label>
                     <button
                       type="button"
@@ -2743,6 +2759,7 @@ const MediaCreate: React.FC = () => {
                     <AnimatePresence>
                       {showCollectionDropdown && (
                         <motion.div
+                          data-tutorial="media-collection-dropdown-list"
                           initial={{ opacity: 0, y: -4 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -4 }}
@@ -2774,22 +2791,24 @@ const MediaCreate: React.FC = () => {
                           }) : (
                             <div className="px-3 py-3 text-center text-[11px] text-white/30">{t('mediaCreate.noCollection')}</div>
                           )}
-                          <div className="border-t border-white/5 mt-1 pt-1 px-1.5">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setShowCollectionDropdown(false);
-                                useNavigationStore.setState({ editingCollectionId: null });
-                                forceNavigate('collection-edit' as any);
-                              }}
-                              className="w-full flex items-center gap-2.5 px-2.5 py-2 text-left rounded-lg hover:bg-white/[0.06] transition-all cursor-pointer"
-                            >
-                              <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-white/5">
-                                <Plus className="w-3.5 h-3.5 text-white/40" />
-                              </div>
-                              <span className="text-sm text-white/50">{t('library.newCollection')}</span>
-                            </button>
-                          </div>
+                          {!tutorialBlockNewCollection && (
+                            <div className="border-t border-white/5 mt-1 pt-1 px-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setShowCollectionDropdown(false);
+                                  useNavigationStore.setState({ editingCollectionId: null });
+                                  forceNavigate('collection-edit' as any);
+                                }}
+                                className="w-full flex items-center gap-2.5 px-2.5 py-2 text-left rounded-lg hover:bg-white/[0.06] transition-all cursor-pointer"
+                              >
+                                <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-white/5">
+                                  <Plus className="w-3.5 h-3.5 text-white/40" />
+                                </div>
+                                <span className="text-sm text-white/50">{t('library.newCollection')}</span>
+                              </button>
+                            </div>
+                          )}
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -2797,7 +2816,7 @@ const MediaCreate: React.FC = () => {
 
                   {/* Title + Creator row */}
                   <div className="grid grid-cols-2 gap-3">
-                    <div>
+                    <div data-tutorial="media-title-input" className={titleLocked ? 'pointer-events-none opacity-60' : ''}>
                       <label className="block text-[11px] font-semibold text-white/40 uppercase tracking-wider mb-1.5">{t('common.title')} <span className="text-red-400">*</span></label>
                       <input
                         type="text"
@@ -2812,18 +2831,20 @@ const MediaCreate: React.FC = () => {
                         <p className="text-[10px] text-red-400 mt-1">{t('mediaCreate.titleRequired')}</p>
                       )}
                     </div>
-                    <CreatorSelector
-                      value={form.creator}
-                      onChange={(val) => updateField('creator', val)}
-                      allSuggestions={creatorSuggestions}
-                      label={creatorLabel}
-                      placeholder={`${creatorLabel}...`}
-                      maxVisible={5}
-                    />
+                    <div data-tutorial="media-creator" className={creatorLocked ? 'pointer-events-none opacity-60' : ''}>
+                      <CreatorSelector
+                        value={form.creator}
+                        onChange={(val) => updateField('creator', val)}
+                        allSuggestions={creatorSuggestions}
+                        label={creatorLabel}
+                        placeholder={`${creatorLabel}...`}
+                        maxVisible={5}
+                      />
+                    </div>
                   </div>
 
                   {/* Media status + Release Date row */}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className={`grid grid-cols-2 gap-3 ${statusDateLocked ? 'pointer-events-none opacity-60' : ''}`} data-tutorial="media-status-date">
                     {/* Media status custom dropdown */}
                     <MediaStatusPicker
                       value={form.mediaStatus}
@@ -2837,7 +2858,7 @@ const MediaCreate: React.FC = () => {
                   </div>
 
                   {/* Synopsis */}
-                  <div>
+                  <div className={synopsisLocked ? 'pointer-events-none opacity-60' : ''} data-tutorial="media-synopsis">
                     <label className="block text-[11px] font-semibold text-white/40 uppercase tracking-wider mb-1.5">{t('mediaCreate.synopsis')}</label>
                     <div className="rounded-xl overflow-hidden border border-white/10 focus-within:border-primary/30 transition-colors">
                       <GravityMarkdownEditor
@@ -2869,7 +2890,7 @@ const MediaCreate: React.FC = () => {
             </div>
 
             {/* Crédits — LEFT COLUMN (2/3) */}
-            <div className="glass-card rounded-2xl p-6 relative z-[2] mb-6">
+            <div className="glass-card rounded-2xl p-6 relative z-[2] mb-6" data-tutorial="media-credits">
               <div className="flex items-center gap-2.5 mb-5 pb-3 border-b border-white/5">
                 <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#a78bfa20' }}>
                   <Users className="w-3.5 h-3.5" style={{ color: '#a78bfa' }} />
@@ -2885,7 +2906,7 @@ const MediaCreate: React.FC = () => {
             </div>
 
             {/* Avis — LEFT COLUMN (2/3) */}
-            <div className="glass-card rounded-2xl p-6 relative z-[1]">
+            <div className={`glass-card rounded-2xl p-6 relative z-[1] ${reviewLocked ? 'pointer-events-none opacity-60' : ''}`} data-tutorial="media-review">
               <div className="flex items-center justify-between mb-5 pb-3 border-b border-white/5">
                 <div className="flex items-center gap-2.5">
                   <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#ec489920' }}>
@@ -2949,7 +2970,8 @@ const MediaCreate: React.FC = () => {
             {/* ============================================================ */}
             <div
               ref={attachmentDropZoneRef}
-              className={`glass-card rounded-2xl p-6 transition-all ${isAttachmentDragOver ? 'ring-2 ring-green-500/50 bg-green-500/[0.03]' : ''}`}
+              className={`glass-card rounded-2xl p-6 transition-all ${isAttachmentDragOver ? 'ring-2 ring-green-500/50 bg-green-500/[0.03]' : ''} ${attachmentsLocked ? 'pointer-events-none opacity-60' : ''}`}
+              data-tutorial="media-attachments"
             >
               <div className="flex items-center justify-between mb-5 pb-3 border-b border-white/5">
                 <div className="flex items-center gap-2.5">
@@ -2999,17 +3021,17 @@ const MediaCreate: React.FC = () => {
                 >
                   <Paperclip className={`w-5 h-5 ${isAttachmentDragOver ? 'text-green-400' : 'text-white/25'}`} />
                   <span className={`text-xs ${isAttachmentDragOver ? 'text-green-400/80' : 'text-white/35'}`}>
-                    {isAttachmentDragOver ? 'Déposer les fichiers ici' : 'Glisser des fichiers ici ou cliquer pour parcourir — sauvegardes, configurations, ebooks, archives...'}
+                    {isAttachmentDragOver ? t('mediaCreate.dropFilesHere') : t('mediaCreate.attachmentDropHint')}
                   </span>
                 </button>
               )}
             </div>
           </div>{/* end left column */}
 
-          {/* RIGHT COLUMN — Genres + Progression + Notes and points (1/3) */}
+          {/* RIGHT COLUMN — Genres + Progression + Rating & Review (1/3) */}
           <div className="space-y-6">
             {/* Genres card - MOVED TO TOP */}
-            <div className="glass-card rounded-2xl p-6 relative z-30">
+            <div className={`glass-card rounded-2xl p-6 relative z-30 ${genresLocked ? 'pointer-events-none opacity-60' : ''}`} data-tutorial="media-genres">
               <div className="flex items-center justify-between mb-5 pb-3 border-b border-white/5">
                 <div className="flex items-center gap-2.5">
                   <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#8b5cf620' }}>
@@ -3044,7 +3066,7 @@ const MediaCreate: React.FC = () => {
             </div>
 
             {/* Progress card */}
-            <div className="glass-card rounded-2xl p-6 relative z-20">
+            <div className={`glass-card rounded-2xl p-6 relative z-20 ${progressLocked ? 'pointer-events-none opacity-60' : ''}`} data-tutorial="media-progress">
               <SectionHeader icon={Zap} title={i18next.t('mediaCreate.progress')} color="#f59e0b" />
 
               {/* Status picker */}
@@ -3366,9 +3388,9 @@ const MediaCreate: React.FC = () => {
               </div>
             </div>
 
-            {/* Notes et points card */}
-            <div className="glass-card rounded-2xl p-6 relative z-10">
-              <SectionHeader icon={PenLine} title={i18next.t('mediaCreate.notesAndPoints')} color="#ec4899" />
+            {/* Rating & Review card */}
+            <div className={`glass-card rounded-2xl p-6 relative z-10 ${ratingLocked ? 'pointer-events-none opacity-60' : ''}`} data-tutorial="media-rating">
+              <SectionHeader icon={PenLine} title={i18next.t('mediaCreate.ratingAndReview')} color="#ec4899" />
 
               {/* Rating /100 with segmented bar */}
               <div className="mb-5">
@@ -3509,7 +3531,7 @@ const MediaCreate: React.FC = () => {
         {/* ============================================================ */}
         {/*  Gallery — full width                                         */}
         {/* ============================================================ */}
-        <div className="glass-card rounded-2xl p-6 mb-6">
+        <div className={`glass-card rounded-2xl p-6 mb-6 ${galleryLocked ? 'pointer-events-none opacity-60' : ''}`} data-tutorial="media-gallery">
           <div className="flex items-center justify-between mb-5 pb-3 border-b border-white/5">
             <div className="flex items-center gap-2.5">
               <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#06b6d420' }}>

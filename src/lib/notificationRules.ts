@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { tauriApi } from '@/lib/tauri-api';
 import type { CreateNotificationDto, Media, Objective, NotificationPreferences } from '@/types';
 
@@ -55,8 +56,8 @@ async function checkStagnantMedia(
           notifications.push({
             profile_id: profileId,
             type: 'stagnant_media',
-            title: `${media.title} stagne`,
-            message: `Cette œuvre est en cours depuis plus de 30 jours sans progression.`,
+            title: i18next.t('notifications.rules.stagnantMedia.title', { title: media.title }),
+            message: i18next.t('notifications.rules.stagnantMedia.message'),
             data: { media_id: media.id, media_title: media.title },
             related_entity_type: 'media',
             related_entity_id: media.id,
@@ -98,8 +99,8 @@ async function checkWaitingMedia(
           notifications.push({
             profile_id: profileId,
             type: 'waiting_media',
-            title: `${media.title} attend`,
-            message: `Cette œuvre est dans la liste "à commencer" depuis plus de 90 jours.`,
+            title: i18next.t('notifications.rules.waitingMedia.title', { title: media.title }),
+            message: i18next.t('notifications.rules.waitingMedia.message'),
             data: { media_id: media.id, media_title: media.title },
             related_entity_type: 'media',
             related_entity_id: media.id,
@@ -138,8 +139,8 @@ async function checkNearCompletion(
         notifications.push({
           profile_id: profileId,
           type: 'near_completion',
-          title: `${media.title} bientôt terminée !`,
-          message: `Tu es à ${Math.round(progress)}% de cette œuvre. Continue comme ça !`,
+          title: i18next.t('notifications.rules.nearCompletion.title', { title: media.title }),
+          message: i18next.t('notifications.rules.nearCompletion.message', { progress: Math.round(progress) }),
           data: { media_id: media.id, media_title: media.title, progress },
           related_entity_type: 'media',
           related_entity_id: media.id,
@@ -184,8 +185,8 @@ async function checkObjectiveDeadline(
           notifications.push({
             profile_id: profileId,
             type: 'objective_deadline',
-            title: `Objectif en retard`,
-            message: `Deadline dans ${daysUntilEnd} jours et seulement ${Math.round(progress)}% complété.`,
+            title: i18next.t('notifications.rules.objectiveDeadline.title'),
+            message: i18next.t('notifications.rules.objectiveDeadline.message', { days: daysUntilEnd, progress: Math.round(progress) }),
             data: { objective_id: objective.id, progress },
             related_entity_type: 'objective',
             related_entity_id: objective.id,
@@ -225,8 +226,8 @@ async function checkObjectiveStalled(
         notifications.push({
           profile_id: profileId,
           type: 'objective_stalled',
-          title: `Objectif au point mort`,
-          message: `Tu es à mi-chemin de la période et n'as pas encore commencé cet objectif.`,
+          title: i18next.t('notifications.rules.objectiveStalled.title'),
+          message: i18next.t('notifications.rules.objectiveStalled.message'),
           data: { objective_id: objective.id },
           related_entity_type: 'objective',
           related_entity_id: objective.id,
@@ -263,8 +264,8 @@ async function checkObjectiveAchieved(
         notifications.push({
           profile_id: profileId,
           type: 'objective_achieved',
-          title: `🎉 Objectif atteint !`,
-          message: `Félicitations ! Tu as atteint ton objectif de ${objective.target_count} œuvres.`,
+          title: i18next.t('notifications.rules.objectiveAchieved.title'),
+          message: i18next.t('notifications.rules.objectiveAchieved.message', { count: objective.target_count }),
           data: { objective_id: objective.id, target_count: objective.target_count },
           related_entity_type: 'objective',
           related_entity_id: objective.id,
@@ -297,16 +298,21 @@ async function checkMonthlyReport(
 
   if (reportExists) return [];
 
-  const monthNames = [
-    'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-    'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+  const monthKeys = [
+    'january', 'february', 'march', 'april', 'may', 'june',
+    'july', 'august', 'september', 'october', 'november', 'december'
   ];
+  const monthName = i18next.t(`notifications.rules.months.${monthKeys[currentMonth - 1]}`);
 
   return [{
     profile_id: profileId,
     type: 'monthly_report',
-    title: `Bilan ${monthNames[currentMonth - 1]} ${currentYear}`,
-    message: `${stats.completed_count} œuvres terminées, ${stats.abandoned_count} abandonnées. Note moyenne: ${stats.average_rating.toFixed(1)}/100`,
+    title: i18next.t('notifications.rules.monthlyReport.title', { month: monthName, year: currentYear }),
+    message: i18next.t('notifications.rules.monthlyReport.message', {
+      completed: stats.completed_count,
+      abandoned: stats.abandoned_count,
+      rating: stats.average_rating.toFixed(1),
+    }),
     data: {
       year: currentYear,
       month: currentMonth,

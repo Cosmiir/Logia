@@ -61,7 +61,7 @@ const ObjectiveCreate: React.FC = () => {
   }, [isEditing, existing, collections, formLoaded]);
 
   const selectedCollection = collections.find((c) => c.id === collectionId);
-  const verb = selectedCollection?.consumption_verb || 'Consommer';
+  const verb = selectedCollection?.consumption_verb || t('common.consume');
 
   const canSave =
     collectionId !== null &&
@@ -115,10 +115,10 @@ const ObjectiveCreate: React.FC = () => {
             </button>
             <div>
               <h1 className="text-2xl font-bold text-white">
-                {isEditing ? "Modifier l'objectif" : 'Nouvel objectif'}
+                {isEditing ? t('objectiveCreate.editObjective') : t('objectiveCreate.newObjective')}
               </h1>
               <p className="text-sm text-white/40 mt-0.5">
-                {isEditing ? 'Modifiez les paramètres de votre objectif' : 'Définissez un objectif pour suivre votre progression'}
+                {isEditing ? t('objectiveCreate.editObjectiveSubtitle') : t('objectiveCreate.newObjectiveSubtitle')}
               </p>
             </div>
           </div>

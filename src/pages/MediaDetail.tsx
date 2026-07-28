@@ -1001,7 +1001,7 @@ const MediaDetail: React.FC = () => {
           <button type="button" onClick={() => navigateToMediaCreate(media.collection_id, media.id)}
             className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-dark rounded-xl text-sm font-semibold text-white transition-all cursor-pointer">
             <Pencil className="w-4 h-4" />
-            Modifier
+            {t('media.edit')}
           </button>
         </div>
 
@@ -1056,7 +1056,7 @@ const MediaDetail: React.FC = () => {
                   </InfoRow>
                 )}
                 {(media.progress_total != null && media.progress_total > 0) && (
-                  <InfoRow icon={Clock} label={collection?.duration_label || 'Durée totale'}>
+                  <InfoRow icon={Clock} label={collection?.duration_label || t('mediaDetail.duration')}>
                     {formatProgression(media.progress_total, collection?.progression_label, collection?.plural_with_s ?? false)}
                   </InfoRow>
                 )}
@@ -1448,7 +1448,7 @@ const MediaDetail: React.FC = () => {
                   onClick={() => setProgressPrompt(null)}
                   className="flex-1 py-2.5 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white rounded-xl text-sm font-semibold transition-colors cursor-pointer"
                 >
-                  Passer
+                  {t('mangaReader.skip')}
                 </button>
                 <button
                   onClick={() => {
@@ -1460,7 +1460,7 @@ const MediaDetail: React.FC = () => {
                   }}
                   className="flex-1 py-2.5 bg-primary hover:bg-primary-dark text-white rounded-xl text-sm font-semibold shadow-lg shadow-primary/25 transition-colors cursor-pointer"
                 >
-                  Mettre à jour
+                  {t('mangaReader.update')}
                 </button>
               </div>
             </motion.div>

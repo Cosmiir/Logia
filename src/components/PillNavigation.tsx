@@ -7,6 +7,7 @@ export interface PillNavigationItem<T extends string> {
   label: string;
   icon?: React.ElementType;
   disabled?: boolean;
+  dataTutorial?: string;
 }
 
 interface PillNavigationProps<T extends string> {
@@ -51,6 +52,7 @@ const PillNavigation = <T extends string>(props: PillNavigationProps<T>) => {
             key={item.id}
             type="button"
             disabled={item.disabled}
+            {...(item.dataTutorial ? { 'data-tutorial': item.dataTutorial } : {})}
             onClick={() => !item.disabled && onSelect(item.id)}
             className={cn(
               'relative flex h-[42px] items-center gap-2 rounded-full px-5 text-xs font-semibold tracking-wider text-gray-400 transition-colors duration-200 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer',

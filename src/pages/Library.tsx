@@ -2135,7 +2135,7 @@ const Library: React.FC = () => {
         {/* Collection pill nav */}
         <div
           ref={navScrollRef}
-          className={`flex items-center gap-2 mb-6 overflow-x-auto pb-1 custom-scrollbar transition-[scrollbar-color] duration-300 ${isHoveringNav ? '' : 'scrollbar-thumb-hidden'}`}
+          className={`flex items-center mb-6 overflow-x-auto pb-1 custom-scrollbar transition-[scrollbar-color] duration-300 ${isHoveringNav ? '' : 'scrollbar-thumb-hidden'}`}
           onMouseEnter={() => setIsHoveringNav(true)}
           onMouseLeave={() => setIsHoveringNav(false)}
           style={{
@@ -2155,48 +2155,56 @@ const Library: React.FC = () => {
               : 'none',
           }}
         >
-          {/* "Tous" pill */}
-          <button
-            onClick={() => handleSetCollection(null)}
-            className={`shrink-0 flex items-center h-[42px] rounded-full px-4 text-xs font-semibold tracking-wider uppercase border transition-colors duration-200 cursor-pointer ${
-              selectedCollectionId === null
-                ? 'bg-white/10 border-white/5 text-white shadow-sm'
-                : 'border-white/10 bg-white/5 text-gray-400 hover:text-white hover:bg-white/10'
-            }`}
+          <div
+            data-tutorial="library-collection-nav"
+            className="inline-flex items-center gap-2 min-w-max py-0.5 px-0.5"
           >
-            {t('library.all')}
-          </button>
+            {/* "Tous" pill */}
+            <button
+              onClick={() => handleSetCollection(null)}
+              className={`shrink-0 flex items-center h-[42px] rounded-full px-4 text-xs font-semibold tracking-wider uppercase border transition-colors duration-200 cursor-pointer ${
+                selectedCollectionId === null
+                  ? 'bg-white/10 border-white/5 text-white shadow-sm'
+                  : 'border-white/10 bg-white/5 text-gray-400 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              {t('library.all')}
+            </button>
 
-          {/* Sortable collection pills */}
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-            modifiers={[restrictToHorizontalAxis]}
-          >
-            <SortableContext items={orderedIds} strategy={horizontalListSortingStrategy}>
-              {orderedCollections.map((collection) => (
-                <SortableCollectionPill
-                  key={collection.id}
-                  collection={collection}
-                  isActive={selectedCollectionId === collection.id}
-                  onSelect={handleSetCollection}
-                  onContextMenu={handleCollectionContextMenu}
-                />
-              ))}
-            </SortableContext>
-          </DndContext>
+            {/* Sortable collection pills */}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+              modifiers={[restrictToHorizontalAxis]}
+            >
+              <SortableContext items={orderedIds} strategy={horizontalListSortingStrategy}>
+                {orderedCollections.map((collection) => (
+                  <SortableCollectionPill
+                    key={collection.id}
+                    collection={collection}
+                    isActive={selectedCollectionId === collection.id}
+                    onSelect={handleSetCollection}
+                    onContextMenu={handleCollectionContextMenu}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
 
-          {/* "+" add collection pill — inline */}
-          <button
-            onClick={() => navigateToCollectionEdit()}
-            className={`shrink-0 flex items-center justify-center h-[42px] w-[42px] rounded-full border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all duration-200 cursor-pointer ${
-              isHoveringNav ? 'opacity-100' : 'opacity-0 pointer-events-none'
-            }`}
-            title={t('library.newCollection')}
-          >
-            <Plus className="w-4 h-4" />
-          </button>
+            {/* "+" add collection pill — inline */}
+            <button
+              onClick={() => navigateToCollectionEdit()}
+              data-tutorial="library-new-collection-btn"
+              className={`shrink-0 flex items-center justify-center h-[42px] w-[42px] rounded-full border border-white/10 transition-all duration-300 cursor-pointer ${
+                isHoveringNav
+                  ? 'opacity-100 scale-100 text-white bg-primary/20 border-primary/40 shadow-lg shadow-primary/20'
+                  : 'opacity-0 pointer-events-none scale-90 text-gray-400 border-white/10'
+              }`}
+              title={t('library.newCollection')}
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Search & Filters Bar */}
@@ -2449,6 +2457,7 @@ const Library: React.FC = () => {
             {/* Nouveau button */}
             <button
               onClick={() => navigateToMediaCreate(selectedCollectionId)}
+              data-tutorial="library-new-media-btn"
               className="flex items-center gap-2 px-4 py-2.5 bg-primary/20 border border-primary/40 rounded-xl text-sm font-semibold text-white hover:bg-primary/30 hover:border-primary/60 hover:shadow-[0_0_15px_rgba(217,70,239,0.2)] transition-all cursor-pointer"
             >
               <Plus className="w-4 h-4" />

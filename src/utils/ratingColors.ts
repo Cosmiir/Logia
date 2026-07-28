@@ -1,3 +1,5 @@
+import i18next from 'i18next';
+
 /**
  * Unified rating color system
  * Provides consistent colors across the entire application
@@ -38,16 +40,16 @@ export const getRatingColorWithOpacity = (rating: number | null, opacity: number
  * Get rating category label for UI display
  */
 export const getRatingCategory = (rating: number | null): string => {
-  if (rating === null || rating === undefined) return 'Non noté';
-  if (rating >= 95) return "Chef-d'œuvre";
-  if (rating >= 90) return 'Parfait';
-  if (rating >= 85) return 'Excellent';
-  if (rating >= 80) return 'Très bon';
-  if (rating >= 75) return 'Bien';
-  if (rating >= 70) return 'Bon';
-  if (rating >= 60) return 'Assez bon';
-  if (rating >= 50) return 'Moyen';
-  if (rating >= 40) return 'Passable';
-  if (rating >= 20) return 'Mauvais';
-  return 'Nul';
+  if (rating === null || rating === undefined) return i18next.t('common.ratingCategory.notRated');
+  if (rating >= 95) return i18next.t('common.ratingCategory.masterpiece');
+  if (rating >= 90) return i18next.t('common.ratingCategory.perfect');
+  if (rating >= 85) return i18next.t('common.ratingCategory.excellent');
+  if (rating >= 80) return i18next.t('common.ratingCategory.veryGood');
+  if (rating >= 75) return i18next.t('common.ratingCategory.good');
+  if (rating >= 70) return i18next.t('common.ratingCategory.fine');
+  if (rating >= 60) return i18next.t('common.ratingCategory.decent');
+  if (rating >= 50) return i18next.t('common.ratingCategory.average');
+  if (rating >= 40) return i18next.t('common.ratingCategory.passable');
+  if (rating >= 20) return i18next.t('common.ratingCategory.bad');
+  return i18next.t('common.ratingCategory.terrible');
 };

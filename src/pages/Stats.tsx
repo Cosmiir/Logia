@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import i18next from 'i18next';
 import {
   BarChart3, TrendingUp, Star, Calendar, Target, Hash, Flame,
-  ChevronDown, Filter, Award, BookOpen, Tv, Film,
+  Award, BookOpen, Tv, Film,
   Eye, RotateCcw, Minus,
 } from 'lucide-react';
 import { AppShell, MainContent } from '@/components/Layout';
@@ -16,8 +16,10 @@ import { useDashboardStats } from '@/hooks/useStats';
 import { useObjectives } from '@/hooks/useObjectives';
 import { getRatingColor } from '@/utils/ratingColors';
 import { getProgressStatus } from '@/lib/utils';
-import { getProgressStatusLabel } from '@/lib/status-labels';
-import type { Media, Collection, Genre } from '@/types';
+import { getProgressStatusLabel, PROGRESS_STATUS_LABELS, PROGRESS_STATUS_COLORS } from '@/lib/status-labels';
+import type { Media, Collection, Genre, ProgressStatus } from '@/types';
+import { convertFileSrc } from '@tauri-apps/api/core';
+import { useNavigationStore } from '@/stores/useNavigationStore';
 
 /* ================================================================== */
 /*  Period selector helpers                                            */
@@ -33,17 +35,6 @@ interface PeriodFilter {
 
 const MONTHS_FR = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 const MONTHS_SHORT = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
-
-function getAvailableYears(media: Media[]): number[] {
-  const years = new Set<number>();
-  const now = new Date();
-  years.add(now.getFullYear());
-  media.forEach(m => {
-    const d = m.experience_date ? new Date(m.experience_date) : new Date(m.created_at);
-    if (!isNaN(d.getTime())) years.add(d.getFullYear());
-  });
-  return Array.from(years).sort((a, b) => b - a);
-}
 
 function filterMediaByPeriod(media: Media[], period: PeriodFilter): Media[] {
   if (period.type === 'all') return media;
@@ -70,12 +61,16 @@ function filterMediaByPeriod(media: Media[], period: PeriodFilter): Media[] {
 
 /** Donut Chart with interactions */
 const StatusDonutChart: React.FC<{
-  data: { label: string; value: number; color: string; shortLabel: string }[];
+  data: { label: string; value: number; color: string; shortLabel: string; id?: number | string }[];
   size?: number;
   strokeWidth?: number;
-}> = ({ data, size = 160, strokeWidth = 26 }) => {
+  selectedIds?: (number | string)[];
+  onToggleSelect?: (id: number | string) => void;
+}> = ({ data, size = 160, strokeWidth = 26, selectedIds, onToggleSelect }) => {
   const [activeIdx, setActiveIdx] = useState<number>(-1);
   const total = useMemo(() => data.reduce((s, d) => s + d.value, 0), [data]);
+  const hasSelection = selectedIds !== undefined && selectedIds.length > 0;
+  const isSelectable = onToggleSelect !== undefined;
 
   const radius = (size - strokeWidth) / 2;
   const gapDeg = 2;
@@ -111,13 +106,25 @@ const StatusDonutChart: React.FC<{
     return `M ${s1.x} ${s1.y} A ${outerR} ${outerR} 0 ${large} 1 ${e1.x} ${e1.y} L ${s2.x} ${s2.y} A ${innerR} ${innerR} 0 ${large} 0 ${e2.x} ${e2.y} Z`;
   };
 
-  const centerLabel = activeIdx === -1 ? 'TOTAL' : data[activeIdx]?.shortLabel || data[activeIdx]?.label.split(' ')[0];
-  const centerValue = activeIdx === -1 ? total : data[activeIdx]?.value ?? 0;
+  // Center label logic
+  let centerLabel: string;
+  let centerValue: number;
+  if (activeIdx !== -1) {
+    centerLabel = data[activeIdx]?.shortLabel || data[activeIdx]?.label.split(' ')[0];
+    centerValue = data[activeIdx]?.value ?? 0;
+  } else if (hasSelection) {
+    const selectedData = data.filter(d => d.id !== undefined && selectedIds!.includes(d.id));
+    centerLabel = `${selectedData.length} ✓`;
+    centerValue = selectedData.reduce((s, d) => s + d.value, 0);
+  } else {
+    centerLabel = 'TOTAL';
+    centerValue = total;
+  }
 
   return (
     <div className="flex items-center gap-8 flex-wrap" style={{ overflow: 'visible' }}>
       {/* Donut SVG */}
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ flexShrink: 0, cursor: 'pointer', overflow: 'visible' }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ flexShrink: 0, cursor: isSelectable ? 'pointer' : 'default', overflow: 'visible' }}>
         {/* Background track */}
         <circle
           cx={size / 2}
@@ -130,20 +137,25 @@ const StatusDonutChart: React.FC<{
         {/* Segments */}
         {segments.map((seg) => {
           const isActive = activeIdx === seg.index;
-          const isDimmed = activeIdx !== -1 && !isActive;
+          const isHoverDimmed = activeIdx !== -1 && !isActive;
+          const isSelected = !hasSelection || (seg.id !== undefined && selectedIds!.includes(seg.id));
+          const isSelectionDimmed = hasSelection && !isSelected;
+          const opacity = isSelectionDimmed ? 0.15 : isHoverDimmed ? 0.2 : 1;
+          const scale = isActive ? 1.07 : (hasSelection && isSelected ? 1.03 : 1);
           return (
             <path
               key={seg.index}
               d={buildArcPath(seg.startDeg, seg.endDeg, radius, strokeWidth)}
               fill={seg.color}
-              opacity={isDimmed ? 0.2 : 1}
+              opacity={opacity}
               style={{
                 transition: 'opacity 0.2s, transform 0.2s',
                 transformOrigin: `${size / 2}px ${size / 2}px`,
-                transform: isActive ? 'scale(1.07)' : 'scale(1)',
+                transform: `scale(${scale})`,
               }}
               onMouseEnter={() => setActiveIdx(seg.index)}
               onMouseLeave={() => setActiveIdx(-1)}
+              onClick={() => isSelectable && seg.id !== undefined && onToggleSelect!(seg.id)}
             />
           );
         })}
@@ -161,15 +173,20 @@ const StatusDonutChart: React.FC<{
         {data.map((d, i) => {
           const pct = total > 0 ? ((d.value / total) * 100).toFixed(0) + '%' : '—';
           const isActive = activeIdx === i;
-          const isDimmed = activeIdx !== -1 && !isActive;
+          const isHoverDimmed = activeIdx !== -1 && !isActive;
+          const isSelected = !hasSelection || (d.id !== undefined && selectedIds!.includes(d.id));
+          const isSelectionDimmed = hasSelection && !isSelected;
+          const isDimmed = isHoverDimmed || isSelectionDimmed;
           return (
             <div
               key={i}
               className={`flex items-center gap-2.5 px-3 py-2 rounded-xl cursor-pointer transition-all border ${
                 isActive ? 'bg-white/[0.06] border-white/10' : 'border-transparent hover:bg-white/[0.06] hover:border-white/10'
-              }`}
+              } ${hasSelection && isSelected && !isActive ? 'bg-white/[0.03] border-white/5' : ''}`}
+              style={{ opacity: isSelectionDimmed ? 0.4 : 1 }}
               onMouseEnter={() => setActiveIdx(i)}
               onMouseLeave={() => setActiveIdx(-1)}
+              onClick={() => isSelectable && d.id !== undefined && onToggleSelect!(d.id)}
             >
               <span
                 className="w-2.5 h-2.5 rounded-full shrink-0 transition-transform"
@@ -317,125 +334,6 @@ const Section: React.FC<{
 );
 
 /* ================================================================== */
-/*  Period Selector Component                                          */
-/* ================================================================== */
-const PeriodSelector: React.FC<{
-  period: PeriodFilter;
-  onChange: (p: PeriodFilter) => void;
-  years: number[];
-}> = ({ period, onChange, years }) => {
-  const [open, setOpen] = useState(false);
-  const label = period.type === 'all' ? 'Toute la période'
-    : period.type === 'year' ? `${period.year}`
-    : period.type === 'month' ? `${MONTHS_FR[period.month!]} ${period.year}`
-    : 'Période perso.';
-
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white/60 hover:text-white text-xs font-medium transition-all cursor-pointer"
-      >
-        <Calendar className="w-3.5 h-3.5" />
-        {label}
-        <ChevronDown className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-      {open && (
-        <div className="absolute right-0 top-full mt-1 w-56 bg-[#111115] border border-white/10 rounded-xl shadow-2xl z-50 py-1 animate-scale-in">
-          <button
-            onClick={() => { onChange({ type: 'all' }); setOpen(false); }}
-            className={`w-full px-3 py-2 text-xs text-left transition-colors cursor-pointer ${period.type === 'all' ? 'text-primary bg-primary/10' : 'text-white/50 hover:bg-white/5 hover:text-white'}`}
-          >
-            Toute la période
-          </button>
-          <div className="border-t border-white/5 my-1" />
-          {years.map(y => (
-            <div key={y}>
-              <button
-                onClick={() => { onChange({ type: 'year', year: y }); setOpen(false); }}
-                className={`w-full px-3 py-2 text-xs text-left transition-colors cursor-pointer flex items-center justify-between ${
-                  period.type === 'year' && period.year === y ? 'text-primary bg-primary/10' : 'text-white/50 hover:bg-white/5 hover:text-white'
-                }`}
-              >
-                <span>{y}</span>
-                <ChevronDown className="w-3 h-3 -rotate-90" />
-              </button>
-              {(period.type === 'year' || period.type === 'month') && period.year === y && (
-                <div className="grid grid-cols-3 gap-0.5 px-2 pb-1">
-                  {MONTHS_SHORT.map((m, mi) => (
-                    <button
-                      key={mi}
-                      onClick={() => { onChange({ type: 'month', year: y, month: mi }); setOpen(false); }}
-                      className={`px-1 py-1 text-[10px] rounded-md transition-colors cursor-pointer ${
-                        period.type === 'month' && period.month === mi ? 'text-primary bg-primary/10' : 'text-white/30 hover:bg-white/5 hover:text-white/60'
-                      }`}
-                    >
-                      {m}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
-/* ================================================================== */
-/*  Collection Filter Selector                                         */
-/* ================================================================== */
-const CollectionFilter: React.FC<{
-  collections: Collection[];
-  selectedId: number | null;
-  onChange: (id: number | null) => void;
-}> = ({ collections, selectedId, onChange }) => {
-  const [open, setOpen] = useState(false);
-  const selected = collections.find(c => c.id === selectedId);
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white/60 hover:text-white text-xs font-medium transition-all cursor-pointer"
-      >
-        <Filter className="w-3.5 h-3.5" />
-        {selected ? selected.name : 'Toutes les collections'}
-        <ChevronDown className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-      {open && (
-        <div className="absolute right-0 top-full mt-1 w-56 bg-[#111115] border border-white/10 rounded-xl shadow-2xl z-50 py-1 animate-scale-in max-h-72 overflow-y-auto custom-scrollbar">
-          <button
-            onClick={() => { onChange(null); setOpen(false); }}
-            className={`w-full px-3 py-2 text-xs text-left transition-colors cursor-pointer ${
-              selectedId === null ? 'text-primary bg-primary/10' : 'text-white/50 hover:bg-white/5 hover:text-white'
-            }`}
-          >
-            Toutes les collections
-          </button>
-          <div className="border-t border-white/5 my-1" />
-          {collections.map(c => {
-            const Icon = getCollectionIconComponent(c.name, c.icon);
-            return (
-              <button
-                key={c.id}
-                onClick={() => { onChange(c.id); setOpen(false); }}
-                className={`w-full px-3 py-2 text-xs text-left transition-colors cursor-pointer flex items-center gap-2 ${
-                  selectedId === c.id ? 'text-primary bg-primary/10' : 'text-white/50 hover:bg-white/5 hover:text-white'
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5 shrink-0" style={{ color: c.color }} />
-                {c.name}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-};
-
-/* ================================================================== */
 /*  Top / Bottom media list                                            */
 /* ================================================================== */
 const MediaRankList: React.FC<{
@@ -443,6 +341,7 @@ const MediaRankList: React.FC<{
   collections: Collection[];
   direction: 'top' | 'bottom';
 }> = ({ media, collections, direction }) => {
+  const { navigateToMediaDetail } = useNavigationStore();
   const items = useMemo(() => {
     const rated = media.filter(m => m.user_rating !== null && m.user_rating > 0);
     const sorted = [...rated].sort((a, b) =>
@@ -457,22 +356,249 @@ const MediaRankList: React.FC<{
       {items.map((m, i) => {
         const coll = collections.find(c => c.id === m.collection_id);
         const Icon = coll ? getCollectionIconComponent(coll.name, coll.icon) : BookOpen;
+        const collColor = coll?.color || '#8B5CF6';
+        const hasCover = !!m.cover_image;
+        const coverUrl = hasCover ? `${convertFileSrc(m.cover_image!)}?t=${m.updated_at}` : null;
+        const rating = m.user_rating;
+        const ratingColor = getRatingColor(rating!);
+        const status = m.progress_status;
+        const statusLabel = status ? (PROGRESS_STATUS_LABELS[status] ?? status) : null;
+        const statusColor = status ? (PROGRESS_STATUS_COLORS[status] ?? '#ffffff') : null;
+        const creators = m.creator ? m.creator.split(';').map(c => c.trim()).filter(Boolean) : [];
         return (
-          <div key={m.id} className="flex items-center gap-3 py-1.5 px-2 rounded-lg hover:bg-white/[0.03] transition-colors">
-            <span className="text-[10px] font-bold text-white/20 w-4 text-center tabular-nums">{i + 1}</span>
-            <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0" style={{ backgroundColor: `${coll?.color || '#8B5CF6'}15` }}>
-              <Icon className="w-3 h-3" style={{ color: coll?.color || '#8B5CF6' }} />
+          <div
+            key={m.id}
+            onClick={() => navigateToMediaDetail(m.id)}
+            className="flex items-stretch gap-2.5 py-1.5 px-2 rounded-lg hover:bg-white/[0.05] hover:border-white/10 border border-transparent transition-all cursor-pointer group relative h-[80px]"
+          >
+            <span className="text-[10px] font-bold text-white/20 w-4 text-center tabular-nums shrink-0 flex items-center justify-center">{i + 1}</span>
+            <div className="w-[40px] h-full rounded-lg overflow-hidden shrink-0 border border-white/5 bg-white/[0.02] flex items-center justify-center relative">
+              {coverUrl ? (
+                <img src={coverUrl} alt={m.title} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-white/5 to-white/10 flex items-center justify-center">
+                  <Icon className="w-4 h-4 text-white/15" />
+                </div>
+              )}
+              {rating && (
+                <div
+                  className="absolute -bottom-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black border border-black/40 text-white"
+                  style={{ backgroundColor: ratingColor, boxShadow: '0 1px 4px rgba(0,0,0,0.6)' }}
+                >
+                  {rating}
+                </div>
+              )}
             </div>
-            <div className="flex-1 min-w-0">
-              <span className="text-xs font-medium text-white truncate block">{m.title}</span>
-              {m.creator && <span className="text-[10px] text-white/30 truncate block">{m.creator.split(';').map(c => c.trim()).filter(Boolean).join(', ')}</span>}
+            <div className="flex-1 min-w-0 flex flex-col justify-center py-0.5">
+              <h4 className="text-xs font-bold text-white truncate leading-snug group-hover:text-primary transition-colors" title={m.title}>
+                {m.title}
+              </h4>
+              {creators.length > 0 && (
+                <div className="flex items-center gap-1 mt-1 min-w-0 overflow-hidden">
+                  {creators.slice(0, 2).map((cName, idx) => (
+                    <span
+                      key={idx}
+                      className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-semibold bg-white/8 border border-white/12 text-white/85 min-w-0 overflow-hidden"
+                    >
+                      <span className="truncate">{cName}</span>
+                    </span>
+                  ))}
+                  {creators.length > 2 && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-semibold text-white/50 bg-white/5 border border-white/10 whitespace-nowrap shrink-0">
+                      +{creators.length - 2}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
-            <span className="text-sm font-bold tabular-nums shrink-0" style={{ color: getRatingColor(m.user_rating!) }}>
-              {m.user_rating}
-            </span>
+            <div className="flex flex-col items-end gap-1 shrink-0 pt-0.5">
+              {coll && (
+                <span
+                  className="inline-flex items-center gap-1 text-[8px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/5"
+                  style={{ color: collColor }}
+                >
+                  <Icon className="w-2 h-2" />
+                  {coll.name}
+                </span>
+              )}
+              {statusLabel && (
+                <span
+                  className="text-[8px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wide whitespace-nowrap"
+                  style={{ color: statusColor ?? undefined, background: `${statusColor}22`, border: `1px solid ${statusColor}55` }}
+                >
+                  {statusLabel}
+                </span>
+              )}
+            </div>
           </div>
         );
       })}
+    </div>
+  );
+};
+
+/* ================================================================== */
+/*  Activity Drill-Down Chart (year → month → day)                     */
+/* ================================================================== */
+type DrillLevel = 'year' | 'month' | 'day';
+
+const ActivityDrillDownChart: React.FC<{
+  media: Media[];
+  barColor?: string;
+  height?: number;
+  onPeriodChange?: (p: PeriodFilter) => void;
+}> = ({ media, barColor = '#8B5CF6', height = 180, onPeriodChange }) => {
+  const { t } = useTranslation();
+  const [level, setLevel] = useState<DrillLevel>('year');
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+
+  const completedMedia = useMemo(() => {
+    return media.filter(m => getProgressStatus(m) === 'COMPLETED');
+  }, [media]);
+
+  // Yearly data
+  const yearlyData = useMemo(() => {
+    const map: Record<number, number> = {};
+    completedMedia.forEach(m => {
+      const dateStr = m.experience_date || m.created_at;
+      if (!dateStr) return;
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return;
+      map[d.getFullYear()] = (map[d.getFullYear()] || 0) + 1;
+    });
+    return Object.keys(map)
+      .map(Number)
+      .sort((a, b) => a - b)
+      .map(year => ({ label: String(year), value: map[year], id: year }));
+  }, [completedMedia]);
+
+  // Monthly data for a given year
+  const monthlyData = useMemo(() => {
+    if (selectedYear === null) return [];
+    const map: Record<number, number> = {};
+    completedMedia.forEach(m => {
+      const dateStr = m.experience_date || m.created_at;
+      if (!dateStr) return;
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return;
+      if (d.getFullYear() !== selectedYear) return;
+      map[d.getMonth()] = (map[d.getMonth()] || 0) + 1;
+    });
+    return MONTHS_SHORT.map((label, i) => ({
+      label,
+      value: map[i] || 0,
+      id: i,
+      fullLabel: MONTHS_FR[i],
+    }));
+  }, [completedMedia, selectedYear]);
+
+  // Daily data for a given year + month
+  const dailyData = useMemo(() => {
+    if (selectedYear === null || selectedMonth === null) return [];
+    const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+    const map: Record<number, number> = {};
+    completedMedia.forEach(m => {
+      const dateStr = m.experience_date || m.created_at;
+      if (!dateStr) return;
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return;
+      if (d.getFullYear() !== selectedYear || d.getMonth() !== selectedMonth) return;
+      map[d.getDate()] = (map[d.getDate()] || 0) + 1;
+    });
+    const result: { label: string; value: number; id: number }[] = [];
+    for (let day = 1; day <= daysInMonth; day++) {
+      result.push({ label: String(day), value: map[day] || 0, id: day });
+    }
+    return result;
+  }, [completedMedia, selectedYear, selectedMonth]);
+
+  const currentData = level === 'year' ? yearlyData : level === 'month' ? monthlyData : dailyData;
+  const max = Math.max(...currentData.map(d => d.value), 1);
+  const barWidth = Math.max(8, Math.min(40, 600 / Math.max(currentData.length, 1) - 4));
+
+  const handleBarClick = (item: { id: number }) => {
+    if (level === 'year') {
+      setSelectedYear(item.id);
+      setLevel('month');
+      onPeriodChange?.({ type: 'year', year: item.id });
+    } else if (level === 'month') {
+      setSelectedMonth(item.id);
+      setLevel('day');
+      onPeriodChange?.({ type: 'month', year: selectedYear!, month: item.id });
+    }
+  };
+
+  const goBack = () => {
+    if (level === 'day') {
+      setLevel('month');
+      setSelectedMonth(null);
+      onPeriodChange?.({ type: 'year', year: selectedYear! });
+    } else if (level === 'month') {
+      setLevel('year');
+      setSelectedYear(null);
+      onPeriodChange?.({ type: 'all' });
+    }
+  };
+
+  const breadcrumb = level === 'year' ? null
+    : level === 'month' ? (
+      <div className="flex items-center gap-2 text-xs">
+        <button onClick={goBack} className="text-white/30 hover:text-white transition-colors cursor-pointer">{t('stats.allYears')}</button>
+        <span className="text-white/20">/</span>
+        <span className="text-white font-medium">{selectedYear}</span>
+      </div>
+    ) : (
+      <div className="flex items-center gap-2 text-xs">
+        <button onClick={() => { setLevel('year'); setSelectedYear(null); setSelectedMonth(null); onPeriodChange?.({ type: 'all' }); }} className="text-white/30 hover:text-white transition-colors cursor-pointer">{t('stats.allYears')}</button>
+        <span className="text-white/20">/</span>
+        <button onClick={() => { setLevel('month'); setSelectedMonth(null); onPeriodChange?.({ type: 'year', year: selectedYear! }); }} className="text-white/40 hover:text-white transition-colors cursor-pointer">{selectedYear}</button>
+        <span className="text-white/20">/</span>
+        <span className="text-white font-medium">{MONTHS_FR[selectedMonth!]}</span>
+      </div>
+    );
+
+  if (yearlyData.length === 0) {
+    return <p className="text-xs text-white/20 text-center py-8">{i18next.t('stats.noCompletedThisPeriod')}</p>;
+  }
+
+  return (
+    <div>
+      {breadcrumb && (
+        <div className="mb-3">{breadcrumb}</div>
+      )}
+      <div className="w-full overflow-x-auto custom-scrollbar">
+        <div className="flex items-end gap-1 justify-center" style={{ minHeight: height, minWidth: currentData.length * (barWidth + 4) }}>
+          {currentData.map((d, i) => (
+            <div
+              key={i}
+              className="flex flex-col items-center gap-1 group cursor-pointer"
+              style={{ width: barWidth }}
+              onClick={() => level !== 'day' && handleBarClick(d)}
+            >
+              <span className="text-[9px] text-white/40 font-medium tabular-nums opacity-0 group-hover:opacity-100 transition-opacity">
+                {d.value}
+              </span>
+              <div
+                className="w-full rounded-t-sm transition-all duration-500 group-hover:brightness-125"
+                style={{
+                  height: `${Math.max((d.value / max) * (height - 30), d.value > 0 ? 3 : 1)}px`,
+                  background: `linear-gradient(to top, ${barColor}, ${barColor}bb)`,
+                  boxShadow: d.value > 0 ? `0 0 6px ${barColor}25` : 'none',
+                }}
+                title={`${d.label}: ${d.value}`}
+              />
+              <span className="text-[8px] text-white/25 font-medium whitespace-nowrap">{d.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      {level === 'year' && (
+        <p className="text-[10px] text-white/20 mt-2 text-center">{i18next.t('stats.clickYearHint')}</p>
+      )}
+      {level === 'month' && (
+        <p className="text-[10px] text-white/20 mt-2 text-center">{i18next.t('stats.clickMonthHint')}</p>
+      )}
     </div>
   );
 };
@@ -488,9 +614,8 @@ const Stats: React.FC = () => {
   const { data: objectives = [] } = useObjectives();
 
   const [period, setPeriod] = useState<PeriodFilter>({ type: 'all' });
-  const [collectionFilter, setCollectionFilter] = useState<number | null>(null);
-
-  const availableYears = useMemo(() => getAvailableYears(allMedia), [allMedia]);
+  const [selectedCollections, setSelectedCollections] = useState<number[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<ProgressStatus[]>([]);
 
   // Collection map
   const collMap = useMemo(() => {
@@ -499,27 +624,67 @@ const Stats: React.FC = () => {
     return m;
   }, [collections]);
 
-  // Filtered media
-  const filteredMedia = useMemo(() => {
-    let m = allMedia;
-    if (collectionFilter !== null) m = m.filter(x => x.collection_id === collectionFilter);
-    m = filterMediaByPeriod(m, period);
+  // Media filtered by period only
+  const periodFilteredMedia = useMemo(() => {
+    return filterMediaByPeriod(allMedia, period);
+  }, [allMedia, period]);
+
+  // Media for status donut: period + collection filter (no status filter so donut shows all statuses)
+  const mediaForStatusDonut = useMemo(() => {
+    let m = periodFilteredMedia;
+    if (selectedCollections.length > 0) {
+      m = m.filter(x => x.collection_id !== null && selectedCollections.includes(x.collection_id));
+    }
     return m;
-  }, [allMedia, period, collectionFilter]);
+  }, [periodFilteredMedia, selectedCollections]);
+
+  // Media for collection donut: period + status filter (no collection filter so donut shows all collections)
+  const mediaForCollectionDonut = useMemo(() => {
+    let m = periodFilteredMedia;
+    if (selectedStatuses.length > 0) {
+      m = m.filter(x => selectedStatuses.includes(getProgressStatus(x)));
+    }
+    return m;
+  }, [periodFilteredMedia, selectedStatuses]);
+
+  // Media for activity drill-down chart: collection + status filter but NOT period
+  // (the chart manages its own internal year/month/day drill-down)
+  const mediaForActivityChart = useMemo(() => {
+    let m = allMedia;
+    if (selectedCollections.length > 0) {
+      m = m.filter(x => x.collection_id !== null && selectedCollections.includes(x.collection_id));
+    }
+    if (selectedStatuses.length > 0) {
+      m = m.filter(x => selectedStatuses.includes(getProgressStatus(x)));
+    }
+    return m;
+  }, [allMedia, selectedCollections, selectedStatuses]);
+
+  // Fully filtered media (period + collections + statuses) — used by all other charts
+  const filteredMedia = useMemo(() => {
+    let m = periodFilteredMedia;
+    if (selectedCollections.length > 0) {
+      m = m.filter(x => x.collection_id !== null && selectedCollections.includes(x.collection_id));
+    }
+    if (selectedStatuses.length > 0) {
+      m = m.filter(x => selectedStatuses.includes(getProgressStatus(x)));
+    }
+    return m;
+  }, [periodFilteredMedia, selectedCollections, selectedStatuses]);
 
   /* -------------------------------- */
   /*  Computed statistics              */
   /* -------------------------------- */
 
-  // Status breakdown
+  // Status breakdown (from media without status filter so donut shows all statuses)
   const statusBreakdown = useMemo(() => {
     const counts = { COMPLETED: 0, IN_PROGRESS: 0, NOT_STARTED: 0, ABANDONED: 0 };
-    filteredMedia.forEach(m => {
+    mediaForStatusDonut.forEach(m => {
       const s = getProgressStatus(m);
       counts[s as keyof typeof counts]++;
     });
     return counts;
-  }, [filteredMedia]);
+  }, [mediaForStatusDonut]);
 
   // Average rating
   const avgRating = useMemo(() => {
@@ -528,17 +693,17 @@ const Stats: React.FC = () => {
     return { avg: rated.reduce((s, m) => s + m.user_rating!, 0) / rated.length, count: rated.length };
   }, [filteredMedia]);
 
-  // By collection
+  // By collection (from media without collection filter so donut shows all collections)
   const byCollection = useMemo(() => {
     const map: Record<number, number> = {};
-    filteredMedia.forEach(m => {
+    mediaForCollectionDonut.forEach(m => {
       if (m.collection_id) map[m.collection_id] = (map[m.collection_id] || 0) + 1;
     });
     return collections
       .map(c => ({ id: c.id, name: c.name, color: c.color, count: map[c.id] || 0, icon: c.icon }))
       .filter(c => c.count > 0)
       .sort((a, b) => b.count - a.count);
-  }, [filteredMedia, collections]);
+  }, [mediaForCollectionDonut, collections]);
 
   // Rating distribution (histogram 0-100 in buckets of 5)
   const ratingDistribution = useMemo(() => {
@@ -600,41 +765,6 @@ const Stats: React.FC = () => {
     return { totalChapters, totalEpisodes, replayCount, totalReplays };
   }, [filteredMedia, collMap]);
 
-  // Activity timeline (media finished per month)
-  const timeline = useMemo(() => {
-    const map: Record<string, number> = {};
-    // Finished media = progress_status === COMPLETED
-    const finished = filteredMedia.filter(m => getProgressStatus(m) === 'COMPLETED');
-    finished.forEach(m => {
-      const dateStr = m.experience_date || m.created_at;
-      if (!dateStr) return;
-      const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return;
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      map[key] = (map[key] || 0) + 1;
-    });
-
-    // Generate sorted months
-    const keys = Object.keys(map).sort();
-    if (keys.length === 0) return [];
-
-    // Fill gaps between first and last month
-    const start = new Date(keys[0] + '-01');
-    const end = new Date(keys[keys.length - 1] + '-01');
-    const result: { label: string; value: number; fullLabel: string }[] = [];
-    const cursor = new Date(start);
-    while (cursor <= end) {
-      const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`;
-      result.push({
-        label: `${MONTHS_SHORT[cursor.getMonth()]} ${String(cursor.getFullYear()).slice(-2)}`,
-        value: map[key] || 0,
-        fullLabel: `${MONTHS_FR[cursor.getMonth()]} ${cursor.getFullYear()}`,
-      });
-      cursor.setMonth(cursor.getMonth() + 1);
-    }
-    return result;
-  }, [filteredMedia]);
-
   // Seasonality (media per month across all years)
   const seasonality = useMemo(() => {
     const counts = new Array(12).fill(0);
@@ -680,26 +810,6 @@ const Stats: React.FC = () => {
       <MainContent>
         <div className="space-y-6">
 
-          {/* Toolbar: Period + Collection filter */}
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <h1 className="text-xl font-bold text-white flex items-center gap-2">
-              <BarChart3 className="w-6 h-6 text-primary" />
-              Statistiques
-            </h1>
-            <div className="flex items-center gap-2 flex-wrap">
-              <CollectionFilter
-                collections={collections}
-                selectedId={collectionFilter}
-                onChange={setCollectionFilter}
-              />
-              <PeriodSelector
-                period={period}
-                onChange={setPeriod}
-                years={availableYears}
-              />
-            </div>
-          </div>
-
           {/* ============================================ */}
           {/* Vue d'ensemble                               */}
           {/* ============================================ */}
@@ -711,33 +821,85 @@ const Stats: React.FC = () => {
           </div>
 
           {/* ============================================ */}
+          {/* Activité dans le temps                       */}
+          {/* ============================================ */}
+          <Section title={t('stats.activityOverTime')} icon={Flame} iconColor="#f97316">
+            <ActivityDrillDownChart media={mediaForActivityChart} barColor="#8B5CF6" height={180} onPeriodChange={setPeriod} />
+          </Section>
+
+          {/* ============================================ */}
           {/* Status breakdown + Collection breakdown      */}
           {/* ============================================ */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Section title={t('stats.statusBreakdown')} icon={Eye} iconColor="#3b82f6">
+            <Section
+              title={t('stats.statusBreakdown')}
+              icon={Eye}
+              iconColor="#3b82f6"
+              action={selectedStatuses.length > 0 ? (
+                <button
+                  onClick={() => setSelectedStatuses([])}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-white/50 hover:text-white text-[11px] font-medium transition-all cursor-pointer"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  {t('common.all')}
+                </button>
+              ) : undefined}
+            >
               <StatusDonutChart
                 size={160}
                 strokeWidth={26}
                 data={[
-                  { label: getProgressStatusLabel('NOT_STARTED'), shortLabel: 'À', value: statusBreakdown.NOT_STARTED, color: '#818cf8' },
-                  { label: getProgressStatusLabel('IN_PROGRESS'), shortLabel: 'EN', value: statusBreakdown.IN_PROGRESS, color: '#0ea5e9' },
-                  { label: getProgressStatusLabel('ABANDONED'), shortLabel: 'ABAND.', value: statusBreakdown.ABANDONED, color: '#f43f5e' },
-                  { label: getProgressStatusLabel('COMPLETED'), shortLabel: 'TERM.', value: statusBreakdown.COMPLETED, color: '#10b981' },
+                  { id: 'NOT_STARTED', label: getProgressStatusLabel('NOT_STARTED'), shortLabel: 'À', value: statusBreakdown.NOT_STARTED, color: '#818cf8' },
+                  { id: 'IN_PROGRESS', label: getProgressStatusLabel('IN_PROGRESS'), shortLabel: 'EN', value: statusBreakdown.IN_PROGRESS, color: '#0ea5e9' },
+                  { id: 'ABANDONED', label: getProgressStatusLabel('ABANDONED'), shortLabel: 'ABAND.', value: statusBreakdown.ABANDONED, color: '#f43f5e' },
+                  { id: 'COMPLETED', label: getProgressStatusLabel('COMPLETED'), shortLabel: 'TERM.', value: statusBreakdown.COMPLETED, color: '#10b981' },
                 ]}
+                selectedIds={selectedStatuses}
+                onToggleSelect={(id) => {
+                  const status = id as ProgressStatus;
+                  setSelectedStatuses(prev =>
+                    prev.includes(status)
+                      ? prev.filter(s => s !== status)
+                      : [...prev, status]
+                  );
+                }}
               />
             </Section>
 
-            <Section title={t('stats.collectionBreakdown')} icon={Film} iconColor="#f59e0b">
+            <Section
+              title={t('stats.collectionBreakdown')}
+              icon={Film}
+              iconColor="#f59e0b"
+              action={selectedCollections.length > 0 ? (
+                <button
+                  onClick={() => setSelectedCollections([])}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-white/50 hover:text-white text-[11px] font-medium transition-all cursor-pointer"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  {t('common.all')}
+                </button>
+              ) : undefined}
+            >
               {byCollection.length > 0 ? (
                 <StatusDonutChart
                   size={150}
                   strokeWidth={24}
                   data={byCollection.map(c => ({
+                    id: c.id,
                     label: c.name,
                     shortLabel: c.name.slice(0, 8),
                     value: c.count,
                     color: c.color,
                   }))}
+                  selectedIds={selectedCollections}
+                  onToggleSelect={(id) => {
+                    const numId = typeof id === 'string' ? parseInt(id, 10) : id;
+                    setSelectedCollections(prev =>
+                      prev.includes(numId)
+                        ? prev.filter(x => x !== numId)
+                        : [...prev, numId]
+                    );
+                  }}
                 />
               ) : (
                 <p className="text-xs text-white/20 text-center py-8">{t('stats.noMediaThisPeriod')}</p>
@@ -786,17 +948,6 @@ const Stats: React.FC = () => {
             <StatCard label={t('stats.collections')} value={collections.length} sub={`${allMedia.length} ${t('common.media')}`} icon={Film} color="#8B5CF6" />
             <StatCard label={t('stats.mediaCompleted')} value={finishedThisPeriod} sub={`${t('stats.outOf')} ${addedThisPeriod}`} icon={TrendingUp} color="#22c55e" />
           </div>
-
-          {/* ============================================ */}
-          {/* Activité dans le temps                       */}
-          {/* ============================================ */}
-          <Section title={t('stats.activityOverTime')} icon={Flame} iconColor="#f97316">
-            {timeline.length > 0 ? (
-              <VBarChart data={timeline} height={160} barColor="#8B5CF6" />
-            ) : (
-              <p className="text-xs text-white/20 text-center py-8">{t('stats.noCompletedThisPeriod')}</p>
-            )}
-          </Section>
 
           <Section title={t('stats.seasonality')} icon={Calendar} iconColor="#06b6d4">
             <VBarChart data={seasonality} height={120} barColor="#06b6d4" />

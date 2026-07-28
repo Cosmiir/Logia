@@ -27,7 +27,7 @@ pub fn get_dashboard_stats(conn: &Connection) -> Result<DashboardStats> {
         "SELECT
            (SELECT COUNT(*) FROM media) as total_media,
            (SELECT COUNT(*) FROM collections) as total_collections,
-           COALESCE((SELECT AVG(user_rating) FROM media WHERE user_rating IS NOT NULL), 0.0) as avg_rating,
+           COALESCE((SELECT AVG(user_rating) FROM media WHERE user_rating IS NOT NULL AND user_rating > 0), 0.0) as avg_rating,
            SUM(CASE WHEN experience_date IS NOT NULL
                      AND experience_date >= strftime('%Y-%m-01', 'now')
                 THEN 1 ELSE 0 END) as media_this_month,
@@ -39,8 +39,7 @@ pub fn get_dashboard_stats(conn: &Connection) -> Result<DashboardStats> {
                 THEN 1 ELSE 0 END) as in_progress,
            SUM(CASE WHEN progress_status = 'NOT_STARTED'
                 THEN 1 ELSE 0 END) as not_started,
-           SUM(CASE WHEN user_rating IS NOT NULL AND user_rating > 0
-                THEN 1 ELSE 0 END) as rated_count,
+           (SELECT COUNT(*) FROM media WHERE user_rating IS NOT NULL AND user_rating > 0) as rated_count,
            SUM(CASE WHEN experience_date IS NOT NULL
                      AND experience_date >= strftime('%Y-%m-01', 'now')
                 THEN 1 ELSE 0 END) as trend_this_month,
@@ -70,9 +69,9 @@ pub fn get_dashboard_stats(conn: &Connection) -> Result<DashboardStats> {
     // Get all ratings for median and std dev calculation
     // (still need to load ratings for std dev — no simple SQL-only way)
     let mut stmt = conn.prepare("SELECT user_rating FROM media WHERE user_rating IS NOT NULL AND user_rating > 0")?;
-    let ratings: Vec<i32> = stmt.query_map([], |row| row.get::<_, i32>(0))?
+    let ratings: Vec<i32> = stmt.query_map([], |row| row.get::<_, f64>(0))?
         .filter_map(|r| r.ok())
-        .map(|r: i32| ((r as f64 / 10.0) * 100.0).round() as i32) // Convert to 0-100 scale
+        .map(|r: f64| r as i32)
         .collect();
 
     let rating_median = calculate_median(&ratings);

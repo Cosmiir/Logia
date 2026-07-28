@@ -18,6 +18,8 @@ import Dashboard from './pages/Dashboard';
 import Library from './pages/Library';
 import Settings from './pages/Settings';
 import StorageMissingScreen from './components/StorageMissingScreen';
+import TutorialOverlay from './components/tutorial/TutorialOverlay';
+import { useTutorialStore } from './stores/useTutorialStore';
 import type { Profile } from './types';
 
 // Lazy-loaded pages (secondary routes — not needed on initial render)
@@ -145,7 +147,10 @@ function App() {
   // First launch: no profiles exist yet
   // Only show onboarding if storage is accessible (not missing)
   if (!onboardingDone && profiles && profiles.length === 0 && !appStatus?.storage_missing) {
-    return <Onboarding onComplete={() => setOnboardingDone(true)} />;
+    return <Onboarding onComplete={() => {
+      setOnboardingDone(true);
+      useTutorialStore.getState().setJustFinishedOnboarding(true);
+    }} />;
   }
 
   // Profile selection on startup (only if multiple profiles exist and setting is enabled)
@@ -202,19 +207,22 @@ function App() {
   const PageComponent = pages[currentPage];
 
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={currentPage}
-        variants={pageVariants}
-        initial={animationsEnabled ? "initial" : undefined}
-        animate={animationsEnabled ? "animate" : undefined}
-        exit={animationsEnabled ? "exit" : undefined}
-        transition={{ duration: animationsEnabled ? 0.15 : 0, ease: 'easeInOut' }}
-        className="contents"
-      >
-        <PageComponent />
-      </motion.div>
-    </AnimatePresence>
+    <>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentPage}
+          variants={pageVariants}
+          initial={animationsEnabled ? "initial" : undefined}
+          animate={animationsEnabled ? "animate" : undefined}
+          exit={animationsEnabled ? "exit" : undefined}
+          transition={{ duration: animationsEnabled ? 0.15 : 0, ease: 'easeInOut' }}
+          className="contents"
+        >
+          <PageComponent />
+        </motion.div>
+      </AnimatePresence>
+      <TutorialOverlay />
+    </>
   );
 }
 

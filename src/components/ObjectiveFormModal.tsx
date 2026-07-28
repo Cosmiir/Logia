@@ -48,7 +48,7 @@ const ObjectiveFormModal: React.FC<ObjectiveFormModalProps> = ({
   }, [open, editingObjective, collections]);
 
   const selectedCollection = collections.find((c) => c.id === collectionId);
-  const verb = selectedCollection?.consumption_verb || 'Consommer';
+  const verb = selectedCollection?.consumption_verb || t('common.consume');
 
   const canSave =
     collectionId !== null &&
