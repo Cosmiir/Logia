@@ -2195,10 +2195,8 @@ const Library: React.FC = () => {
             <button
               onClick={() => navigateToCollectionEdit()}
               data-tutorial="library-new-collection-btn"
-              className={`shrink-0 flex items-center justify-center h-[42px] w-[42px] rounded-full border border-white/10 transition-all duration-300 cursor-pointer ${
-                isHoveringNav
-                  ? 'opacity-100 scale-100 text-white bg-primary/20 border-primary/40 shadow-lg shadow-primary/20'
-                  : 'opacity-0 pointer-events-none scale-90 text-gray-400 border-white/10'
+              className={`shrink-0 flex items-center justify-center h-[42px] w-[42px] rounded-full border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all duration-200 cursor-pointer ${
+                isHoveringNav ? 'opacity-100 scale-100' : 'opacity-0 pointer-events-none scale-90'
               }`}
               title={t('library.newCollection')}
             >
