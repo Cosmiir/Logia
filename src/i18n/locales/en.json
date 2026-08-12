@@ -9,6 +9,8 @@
   },
   "common": {
     "cancel": "Cancel",
+    "ok": "OK",
+    "delete": "Delete",
     "profile": "Profile",
     "back": "Back",
     "continue": "Continue",
@@ -177,7 +179,8 @@
       "mergeSuccess": "Merge successful! {{collections}} collections, {{media}} media and {{images}} images were imported.",
       "mergeError": "Merge error: {{error}}",
       "skipDuplicatesLabel": "Skip duplicates (recommended)",
-      "mergeInProgress": "Merging in progress..."
+      "mergeInProgress": "Merging in progress...",
+      "noOtherProfileForMerge": "No other profile available for merging."
     },
     "profile": {
       "activeProfile": "Active profile",
@@ -200,7 +203,15 @@
       "newProfile": "New profile",
       "storage": "Storage",
       "storageHint": "All your data is stored in this folder. You can change it if needed.",
-      "adjustPhoto": "Adjust photo"
+      "adjustPhoto": "Adjust photo",
+      "selectStorageFolder": "Select a new storage folder",
+      "passwordsDoNotMatch": "Passwords do not match",
+      "passwordSet": "Password set",
+      "passwordRemoved": "Password removed",
+      "changeStorageFolder": "Change storage folder",
+      "changingStorage": "Changing...",
+      "storageChangeWarning": "Warning: Changing the storage folder will move all your data to the new folder.",
+      "customAvatarAlt": "Custom avatar"
     },
     "shortcuts": {
       "title": "Keyboard shortcuts",
@@ -304,7 +315,12 @@
     "interfaceAnimations": "Interface animations",
     "interfaceAnimationsHint": "Transitions and visual effects in the app",
     "windowButtons": "Window buttons",
-    "windowButtonsHint": "Style of minimize, maximize and close buttons"
+    "windowButtonsHint": "Style of minimize, maximize and close buttons",
+    "windowStyle": {
+      "windows": "Windows",
+      "macos": "macOS",
+      "hybrid": "Hybrid"
+    }
   },
   "dashboard": {
     "inProgress": "In progress",
@@ -350,6 +366,8 @@
     "ascending": "Ascending",
     "descending": "Descending",
     "max": "Max",
+    "min": "Min",
+    "value": "Value",
     "noGenre": "No genre",
     "noCreator": "No creator",
     "noPerson": "No person",
@@ -359,7 +377,14 @@
     "searchGenre": "Search for a genre...",
     "searchPerson": "Search for a person...",
     "otherResults": "{{count}} other results — refine your search",
-    "otherResultsShort": "{{count}} other — refine your search"
+    "otherResultsShort": "{{count}} other — refine your search",
+    "operators": {
+      "gte": "Greater than or equal",
+      "lte": "Less than or equal",
+      "eq": "Equal to",
+      "neq": "Not equal to",
+      "between": "Between"
+    }
   },
   "media": {
     "releaseDate": "Release date",
@@ -423,7 +448,10 @@
     "noSimilarMedia": "No similar media",
     "myExperience": "My experience",
     "noReview": "No review written",
-    "download": "Download"
+    "download": "Download",
+    "readMore": "Read more",
+    "collapse": "Collapse",
+    "lightboxHint": "Esc to exit · Double-click to zoom"
   },
   "mediaCreate": {
     "attachmentUploadFailed": "One or more attached files could not be copied.",
@@ -694,7 +722,15 @@
     "searchPlaceholder": "Search for a template...",
     "createTemplate": "Create a template",
     "new": "New",
-    "template_one": "Template"
+    "template_one": "Template",
+    "newTemplate": "New template",
+    "editTemplate": "Edit template",
+    "default": "Default",
+    "noTemplateFound": "No template found",
+    "noTemplateCreated": "No template created",
+    "deleting": "Deleting...",
+    "deleteDescription": "This template will be permanently deleted.",
+    "confirmDeleteTitle": "Delete \"{{name}}\"?"
   },
   "collectionEdit": {
     "collectionName": "Collection name",
@@ -968,7 +1004,9 @@
       "negative_points": { "label": "Negative points", "desc": "Weaknesses" },
       "user_review": { "label": "Review", "desc": "Personal review" },
       "genre_ids": { "label": "Genres", "desc": "Genres (separated by , or ;)" }
-    }
+    },
+    "stepInDevelopment": "Step in development",
+    "stepComingSoon": "This step will be implemented soon."
   },
   "objectiveCreate": {
     "selectCollection": "Select a collection above",
@@ -1122,7 +1160,8 @@
     "updateProgressPrompt": "You finished reading {{filename}}. Would you like to update your progress to {{progress}} ?",
     "updateProgressTitle": "Update progress?",
     "skip": "Skip",
-    "update": "Update"
+    "update": "Update",
+    "pageNumber": "Page {{number}}"
   },
   "tutorial": {
     "badge": "New here? Discover Logia",
@@ -1240,6 +1279,59 @@
         "title": "Create your first media",
         "desc": "Review your information and save. You're all set!"
       }
+    }
+  },
+  "languagePicker": {
+    "searchPlaceholder": "Search...",
+    "noResults": "No language found. You can type a custom value.",
+    "useCustom": "Use \"{{value}}\"",
+    "clear": "Clear"
+  },
+  "themes": {
+    "nebula": "Nebula",
+    "midnight": "Midnight",
+    "ember": "Ember",
+    "forest": "Forest",
+    "arctic": "Arctic"
+  },
+  "datePicker": {
+    "placeholder": "Select...",
+    "weekdaysShort": {
+      "mon": "Mo",
+      "tue": "Tu",
+      "wed": "We",
+      "thu": "Th",
+      "fri": "Fr",
+      "sat": "Sa",
+      "sun": "Su"
+    },
+    "monthsLong": {
+      "january": "January",
+      "february": "February",
+      "march": "March",
+      "april": "April",
+      "may": "May",
+      "june": "June",
+      "july": "July",
+      "august": "August",
+      "september": "September",
+      "october": "October",
+      "november": "November",
+      "december": "December"
+    },
+    "monthsShort": {
+      "jan": "Jan",
+      "feb": "Feb",
+      "mar": "Mar",
+      "apr": "Apr",
+      "may": "May",
+      "jun": "Jun",
+      "jul": "Jul",
+      "aug": "Aug",
+      "sep": "Sep",
+      "oct": "Oct",
+      "nov": "Nov",
+      "dec": "Dec"
     }
   }
 }

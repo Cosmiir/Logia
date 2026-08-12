@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronDown, Search, X } from 'lucide-react';
 import * as Flags from 'country-flag-icons/react/3x2';
 
@@ -60,6 +61,7 @@ function FlagIcon({ code, size = 16 }: { code: string; size?: number }) {
 }
 
 const LanguagePicker: React.FC<LanguagePickerProps> = ({ value, onChange, compact = false }) => {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -134,7 +136,7 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ value, onChange, compac
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search..."
+                placeholder={t('languagePicker.searchPlaceholder')}
                 autoFocus
                 className="w-full pl-8 pr-2 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-white placeholder-white/30 focus:outline-none focus:border-primary/30"
               />
@@ -160,7 +162,7 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ value, onChange, compac
               ))
             ) : (
               <div className="px-3 py-3 text-xs text-white/30 text-center">
-                No language found. You can type a custom value.
+                {t('languagePicker.noResults')}
               </div>
             )}
             {search.trim() && !filtered.some((l) => l.code === search.trim()) && (
@@ -170,7 +172,7 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ value, onChange, compac
                 className="w-full flex items-center gap-2 px-3 py-2 text-xs text-white/60 hover:text-white hover:bg-white/5 transition-colors cursor-pointer border-t border-white/5"
               >
                 <span className="text-[9px] text-white/40">??</span>
-                <span className="flex-1 text-left">Use "{search.trim()}"</span>
+                <span className="flex-1 text-left">{t('languagePicker.useCustom', { value: search.trim() })}</span>
               </button>
             )}
           </div>
@@ -180,7 +182,7 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ value, onChange, compac
               onClick={() => handleSelect('')}
               className="w-full px-3 py-2 text-xs text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors cursor-pointer border-t border-white/5"
             >
-              Clear
+              {t('languagePicker.clear')}
             </button>
           )}
         </div>

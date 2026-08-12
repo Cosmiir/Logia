@@ -463,10 +463,10 @@ const Import: React.FC = () => {
       default:
         return (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-white mb-6">Étape en développement</h2>
+            <h2 className="text-2xl font-bold text-white mb-6">{t('import.stepInDevelopment')}</h2>
             <div className="glass-card p-8 rounded-2xl">
               <p className="text-white/60 text-sm">
-                Cette étape sera implémentée prochainement.
+                {t('import.stepComingSoon')}
               </p>
             </div>
           </div>

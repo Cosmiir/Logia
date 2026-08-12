@@ -133,7 +133,7 @@ const ImageCropModal: React.FC<{
           {natSize && (
             <img
               src={imageDataUrl}
-              alt="Preview"
+              alt={t('common.preview')}
               className="select-none pointer-events-none"
               style={imgStyle}
               draggable={false}

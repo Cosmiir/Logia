@@ -108,7 +108,7 @@ const PersonalizationStep: React.FC<PersonalizationStepProps> = ({
                         style={{ backgroundColor: theme.accent }}
                       />
                       <span className={`text-[11px] font-medium ${isActive ? 'text-white' : 'text-gray-400'}`}>
-                        {theme.name}
+                        {t(`themes.${theme.id}`)}
                       </span>
                     </button>
                   );

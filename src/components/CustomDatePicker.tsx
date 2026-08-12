@@ -1,43 +1,23 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-
-const MONTHS_FR = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-const MONTHS_SHORT = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
-const DAYS_FR = ['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'];
+import { formatDateFr, getFirstDayOfWeek } from '@/lib/utils';
 
 type DateView = 'days' | 'months' | 'years';
 
-const parseFRDate = (str: string): string | null => {
-  const parts = str.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
-  if (!parts) return null;
-  
-  const day = parseInt(parts[1], 10);
-  const month = parseInt(parts[2], 10) - 1; // 0-indexed
-  const year = parseInt(parts[3], 10);
-  
-  const date = new Date(year, month, day);
-  
-  if (
-    date.getFullYear() === year &&
-    date.getMonth() === month &&
-    date.getDate() === day &&
-    !isNaN(date.getTime())
-  ) {
-    return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-  }
-  
-  return null;
-};
+const MONTH_KEYS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'] as const;
+const LONG_MONTH_KEYS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'] as const;
+const WEEKDAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
 
 const parseISODate = (str: string): string | null => {
   const parts = str.match(/^(\d{4})[./-](\d{1,2})[./-](\d{1,2})$/);
   if (!parts) return null;
-  
+
   const year = parseInt(parts[1], 10);
   const month = parseInt(parts[2], 10) - 1;
   const day = parseInt(parts[3], 10);
-  
+
   const date = new Date(year, month, day);
   if (
     date.getFullYear() === year &&
@@ -50,9 +30,33 @@ const parseISODate = (str: string): string | null => {
   return null;
 };
 
-const parseDateString = (str: string): string | null => {
+const parseLocaleDate = (str: string, isFr: boolean): string | null => {
+  const parts = str.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
+  if (!parts) return null;
+
+  const first = parseInt(parts[1], 10);
+  const second = parseInt(parts[2], 10);
+  const year = parseInt(parts[3], 10);
+
+  const day = isFr ? first : second;
+  const month = isFr ? second : first;
+  const monthIndex = month - 1;
+
+  const date = new Date(year, monthIndex, day);
+  if (
+    date.getFullYear() === year &&
+    date.getMonth() === monthIndex &&
+    date.getDate() === day &&
+    !isNaN(date.getTime())
+  ) {
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  }
+  return null;
+};
+
+const parseDateString = (str: string, isFr: boolean): string | null => {
   const trimmed = str.trim();
-  return parseFRDate(trimmed) || parseISODate(trimmed);
+  return parseLocaleDate(trimmed, isFr) || parseISODate(trimmed);
 };
 
 const CustomDatePicker: React.FC<{
@@ -61,21 +65,23 @@ const CustomDatePicker: React.FC<{
   label?: string;
   placeholder?: string;
   compact?: boolean;
-}> = ({ value, onChange, label, placeholder = 'Sélectionner...', compact = false }) => {
+}> = ({ value, onChange, label, placeholder, compact = false }) => {
+  const { t, i18n } = useTranslation();
+  const isFr = i18n.language === 'fr';
+  const firstDay = getFirstDayOfWeek();
+
   const [isOpen, setIsOpen] = useState(false);
   const [dateView, setDateView] = useState<DateView>('days');
   const containerRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [panelOffsetX, setPanelOffsetX] = useState(0);
-  const parsed = value ? new Date(value) : null;
+  const parsed = value ? new Date(`${value}T00:00:00`) : null;
   const [viewYear, setViewYear] = useState(parsed?.getFullYear() ?? new Date().getFullYear());
   const [viewMonth, setViewMonth] = useState(parsed?.getMonth() ?? new Date().getMonth());
   const [yearRangeStart, setYearRangeStart] = useState(Math.floor((parsed?.getFullYear() ?? new Date().getFullYear()) / 20) * 20);
 
-  const displayValue = parsed
-    ? `${String(parsed.getDate()).padStart(2, '0')}/${String(parsed.getMonth() + 1).padStart(2, '0')}/${parsed.getFullYear()}`
-    : '';
+  const displayValue = value ? formatDateFr(value) : '';
 
   const [inputValue, setInputValue] = useState(displayValue);
 
@@ -123,7 +129,7 @@ const CustomDatePicker: React.FC<{
   }, [value, displayValue]);
 
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-  const firstDayOfWeek = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7;
+  const firstDayOfWeek = (new Date(viewYear, viewMonth, 1).getDay() + 7 - firstDay) % 7;
   const days: (number | null)[] = [];
   for (let i = 0; i < firstDayOfWeek; i++) days.push(null);
   for (let i = 1; i <= daysInMonth; i++) days.push(i);
@@ -160,10 +166,10 @@ const CustomDatePicker: React.FC<{
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
-    
+
     // Clean input to only contain digits, slashes, dashes, dots
     let cleaned = val.replace(/[^\d/.-]/g, '');
-    
+
     // Auto-insert slashes if typing forwards
     if (cleaned.length > inputValue.length) {
       if (/^\d{2}$/.test(cleaned)) {
@@ -173,20 +179,20 @@ const CustomDatePicker: React.FC<{
         cleaned = cleaned + '/';
       }
     }
-    
+
     // Limit to 10 characters max
     if (cleaned.length > 10) {
       cleaned = cleaned.substring(0, 10);
     }
-    
+
     setInputValue(cleaned);
-    
+
     if (cleaned.trim() === '') {
       onChange('');
       return;
     }
-    
-    const parsedDate = parseDateString(cleaned);
+
+    const parsedDate = parseDateString(cleaned, isFr);
     if (parsedDate) {
       onChange(parsedDate);
     }
@@ -196,7 +202,7 @@ const CustomDatePicker: React.FC<{
     if (inputValue.trim() === '') {
       onChange('');
     } else {
-      const parsedDate = parseDateString(inputValue);
+      const parsedDate = parseDateString(inputValue, isFr);
       if (!parsedDate) {
         setInputValue(displayValue);
       }
@@ -206,7 +212,7 @@ const CustomDatePicker: React.FC<{
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      const parsedDate = parseDateString(inputValue);
+      const parsedDate = parseDateString(inputValue, isFr);
       if (parsedDate) {
         onChange(parsedDate);
         setIsOpen(false);
@@ -222,6 +228,16 @@ const CustomDatePicker: React.FC<{
       inputRef.current?.blur();
     }
   };
+
+  const monthsLong = LONG_MONTH_KEYS.map((k) => t(`datePicker.monthsLong.${k}`));
+  const monthsShort = MONTH_KEYS.map((k) => t(`datePicker.monthsShort.${k}`));
+
+  const weekdayShift = (firstDay + 6) % 7;
+  const orderedWeekdayKeys = [...WEEKDAY_KEYS.slice(weekdayShift), ...WEEKDAY_KEYS.slice(0, weekdayShift)];
+  const weekdays = orderedWeekdayKeys.map((k) => t(`datePicker.weekdaysShort.${k}`));
+
+  const defaultPlaceholder = t('datePicker.placeholder');
+  const actualPlaceholder = placeholder || defaultPlaceholder;
 
   return (
     <div ref={containerRef} className="relative">
@@ -256,7 +272,7 @@ const CustomDatePicker: React.FC<{
             setIsOpen(true);
             setDateView('days');
           }}
-          placeholder={placeholder}
+          placeholder={actualPlaceholder}
           className="flex-1 bg-transparent border-0 p-0 text-white placeholder:text-white/20 focus:outline-none"
         />
         {value && (
@@ -291,14 +307,14 @@ const CustomDatePicker: React.FC<{
                     <ChevronLeft className="w-4 h-4" />
                   </button>
                   <button type="button" onClick={() => setDateView('months')} className="text-sm font-semibold text-white hover:text-primary transition-colors cursor-pointer px-2 py-1 rounded-lg hover:bg-white/5">
-                    {MONTHS_FR[viewMonth]} {viewYear}
+                    {monthsLong[viewMonth]} {viewYear}
                   </button>
                   <button type="button" onClick={() => { if (viewMonth === 11) { setViewMonth(0); setViewYear(viewYear + 1); } else setViewMonth(viewMonth + 1); }} className="p-1.5 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-colors cursor-pointer">
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
                 <div className="grid grid-cols-7 gap-1 mb-1">
-                  {DAYS_FR.map((d) => (
+                  {weekdays.map((d) => (
                     <div key={d} className="text-center text-[10px] font-semibold text-white/30 uppercase py-1">{d}</div>
                   ))}
                 </div>
@@ -330,7 +346,7 @@ const CustomDatePicker: React.FC<{
                   </button>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
-                  {MONTHS_SHORT.map((m, i) => (
+                  {monthsShort.map((m, i) => (
                     <button key={m} type="button" onClick={() => { setViewMonth(i); setDateView('days'); }} className={`py-2.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${viewMonth === i && viewYear === (parsed?.getFullYear() ?? -1) ? 'bg-primary text-white' : 'text-white/60 hover:bg-white/10 hover:text-white'}`}>
                       {m}
                     </button>

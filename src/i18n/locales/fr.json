@@ -9,6 +9,8 @@
   },
   "common": {
     "cancel": "Annuler",
+    "ok": "OK",
+    "delete": "Supprimer",
     "profile": "Profil",
     "back": "Retour",
     "continue": "Continuer",
@@ -177,7 +179,8 @@
       "mergeSuccess": "Fusion réussie ! {{collections}} collections, {{media}} médias et {{images}} images ont été importés.",
       "mergeError": "Erreur lors de la fusion : {{error}}",
       "skipDuplicatesLabel": "Ignorer les doublons (recommandé)",
-      "mergeInProgress": "Fusion en cours..."
+      "mergeInProgress": "Fusion en cours...",
+      "noOtherProfileForMerge": "Aucun autre profil disponible pour la fusion."
     },
     "profile": {
       "activeProfile": "Profil actif",
@@ -200,7 +203,15 @@
       "newProfile": "Nouveau profil",
       "storage": "Stockage",
       "storageHint": "Toutes vos données sont stockées dans ce dossier. Vous pouvez le modifier si nécessaire.",
-      "adjustPhoto": "Ajuster la photo"
+      "adjustPhoto": "Ajuster la photo",
+      "selectStorageFolder": "Sélectionner un nouveau dossier de stockage",
+      "passwordsDoNotMatch": "Les mots de passe ne correspondent pas",
+      "passwordSet": "Mot de passe défini",
+      "passwordRemoved": "Mot de passe supprimé",
+      "changeStorageFolder": "Changer le dossier de stockage",
+      "changingStorage": "Changement en cours...",
+      "storageChangeWarning": "Attention : Changer le dossier de stockage déplacera toutes vos données vers le nouveau dossier.",
+      "customAvatarAlt": "Avatar personnalisé"
     },
     "shortcuts": {
       "title": "Raccourcis clavier",
@@ -304,7 +315,12 @@
     "interfaceAnimations": "Animations d'interface",
     "interfaceAnimationsHint": "Transitions et effets visuels dans l'application",
     "windowButtons": "Boutons de fenêtre",
-    "windowButtonsHint": "Style des boutons réduire, agrandir et fermer"
+    "windowButtonsHint": "Style des boutons réduire, agrandir et fermer",
+    "windowStyle": {
+      "windows": "Windows",
+      "macos": "macOS",
+      "hybrid": "Hybride"
+    }
   },
   "dashboard": {
     "inProgress": "En cours",
@@ -350,6 +366,8 @@
     "ascending": "Croissant",
     "descending": "Décroissant",
     "max": "Max",
+    "min": "Min",
+    "value": "Valeur",
     "noGenre": "Aucun genre",
     "noCreator": "Aucun créateur",
     "noPerson": "Aucune personne",
@@ -359,7 +377,14 @@
     "searchGenre": "Rechercher un genre...",
     "searchPerson": "Rechercher une personne...",
     "otherResults": "{{count}} autre résultat — affinez votre recherche",
-    "otherResultsShort": "{{count}} autre — affinez votre recherche"
+    "otherResultsShort": "{{count}} autre — affinez votre recherche",
+    "operators": {
+      "gte": "Supérieur ou égal",
+      "lte": "Inférieur ou égal",
+      "eq": "Égal à",
+      "neq": "Différent de",
+      "between": "Entre"
+    }
   },
   "media": {
     "releaseDate": "Date de sortie",
@@ -423,7 +448,10 @@
     "noSimilarMedia": "Aucun média similaire",
     "myExperience": "Mon expérience",
     "noReview": "Aucun avis rédigé",
-    "download": "Télécharger"
+    "download": "Télécharger",
+    "readMore": "Lire la suite",
+    "collapse": "Réduire",
+    "lightboxHint": "Échap pour quitter · Double-clic pour zoomer"
   },
   "mediaCreate": {
     "attachmentUploadFailed": "Un ou plusieurs fichiers joints n'ont pas pu être copiés.",
@@ -694,7 +722,15 @@
     "searchPlaceholder": "Rechercher un modèle...",
     "createTemplate": "Créer un modèle",
     "new": "Nouveau",
-    "template_one": "Modèle"
+    "template_one": "Modèle",
+    "newTemplate": "Nouveau modèle",
+    "editTemplate": "Modifier le modèle",
+    "default": "Défaut",
+    "noTemplateFound": "Aucun modèle trouvé",
+    "noTemplateCreated": "Aucun modèle créé",
+    "deleting": "Suppression...",
+    "deleteDescription": "Ce modèle sera définitivement supprimé.",
+    "confirmDeleteTitle": "Supprimer \"{{name}}\" ?"
   },
   "collectionEdit": {
     "collectionName": "Nom de la collection",
@@ -968,7 +1004,9 @@
       "negative_points": { "label": "Points négatifs", "desc": "Points faibles" },
       "user_review": { "label": "Avis", "desc": "Avis personnel" },
       "genre_ids": { "label": "Genres", "desc": "Genres (séparés par , ou ;)" }
-    }
+    },
+    "stepInDevelopment": "Étape en développement",
+    "stepComingSoon": "Cette étape sera implémentée prochainement."
   },
   "objectiveCreate": {
     "selectCollection": "Sélectionnez une collection ci-dessus",
@@ -1122,7 +1160,8 @@
     "updateProgressPrompt": "Vous avez terminé la lecture de {{filename}}. Souhaitez-vous mettre à jour votre progression à {{progress}} ?",
     "updateProgressTitle": "Mettre à jour la progression ?",
     "skip": "Passer",
-    "update": "Mettre à jour"
+    "update": "Mettre à jour",
+    "pageNumber": "Page {{number}}"
   },
   "tutorial": {
     "badge": "Nouveau ici ? Découvrir Logia",
@@ -1240,6 +1279,59 @@
         "title": "Créer votre premier média",
         "desc": "Vérifiez vos informations et enregistrez. Félicitations, vous êtes prêt !"
       }
+    }
+  },
+  "languagePicker": {
+    "searchPlaceholder": "Rechercher...",
+    "noResults": "Aucune langue trouvée. Vous pouvez saisir une valeur personnalisée.",
+    "useCustom": "Utiliser \"{{value}}\"",
+    "clear": "Effacer"
+  },
+  "themes": {
+    "nebula": "Nébuleuse",
+    "midnight": "Minuit",
+    "ember": "Braise",
+    "forest": "Forêt",
+    "arctic": "Arctique"
+  },
+  "datePicker": {
+    "placeholder": "Sélectionner...",
+    "weekdaysShort": {
+      "mon": "Lu",
+      "tue": "Ma",
+      "wed": "Me",
+      "thu": "Je",
+      "fri": "Ve",
+      "sat": "Sa",
+      "sun": "Di"
+    },
+    "monthsLong": {
+      "january": "Janvier",
+      "february": "Février",
+      "march": "Mars",
+      "april": "Avril",
+      "may": "Mai",
+      "june": "Juin",
+      "july": "Juillet",
+      "august": "Août",
+      "september": "Septembre",
+      "october": "Octobre",
+      "november": "Novembre",
+      "december": "Décembre"
+    },
+    "monthsShort": {
+      "jan": "Jan",
+      "feb": "Fév",
+      "mar": "Mar",
+      "apr": "Avr",
+      "may": "Mai",
+      "jun": "Juin",
+      "jul": "Juil",
+      "aug": "Aoû",
+      "sep": "Sep",
+      "oct": "Oct",
+      "nov": "Nov",
+      "dec": "Déc"
     }
   }
 }

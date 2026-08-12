@@ -58,7 +58,7 @@ const PersonalizationSection: React.FC = () => {
                 style={{ backgroundColor: theme.accent }}
               />
               <span className={`text-[11px] font-medium ${isActive ? 'text-white' : 'text-gray-400'}`}>
-                {theme.name}
+                {t(`themes.${theme.id}`)}
               </span>
             </button>
           );
@@ -117,21 +117,21 @@ const PersonalizationSection: React.FC = () => {
       <p className="text-[11px] text-gray-500 mb-3">{t('personalization.windowButtonsHint')}</p>
       <div className="grid grid-cols-3 gap-3 mb-2">
         {([
-          { id: 'windows' as WindowControlsStyle, label: 'Windows', preview: (
+          { id: 'windows' as WindowControlsStyle, label: t('personalization.windowStyle.windows'), preview: (
             <div className="flex items-center gap-1.5">
               <div className="w-2.5 h-[1px] bg-gray-400" />
               <div className="w-2.5 h-2.5 border border-gray-400 rounded-[1px]" />
               <span className="text-gray-400 text-[10px] font-bold leading-none">&times;</span>
             </div>
           )},
-          { id: 'macos' as WindowControlsStyle, label: 'macOS', preview: (
+          { id: 'macos' as WindowControlsStyle, label: t('personalization.windowStyle.macos'), preview: (
             <div className="flex items-center gap-1.5">
               <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
               <div className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
               <div className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
             </div>
           )},
-          { id: 'hybrid' as WindowControlsStyle, label: 'Hybride', preview: (
+          { id: 'hybrid' as WindowControlsStyle, label: t('personalization.windowStyle.hybrid'), preview: (
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded-full bg-[#ff5f57] flex items-center justify-center"><span className="text-[6px] text-black/50 font-bold">&times;</span></div>
               <div className="w-3 h-3 rounded-full bg-[#febc2e] flex items-center justify-center"><span className="text-[7px] text-black/50 font-bold">-</span></div>

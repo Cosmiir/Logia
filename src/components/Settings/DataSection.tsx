@@ -327,7 +327,7 @@ const DataSection: React.FC = () => {
 
               {otherProfiles.length === 0 ? (
                 <p className="text-xs text-white/30 italic py-2">
-                  Aucun autre profil disponible pour la fusion.
+                  {t('settings.data.noOtherProfileForMerge')}
                 </p>
               ) : (
                 <>

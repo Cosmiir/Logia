@@ -24,24 +24,41 @@ export function getProgressStatus(media: Media): ProgressStatus {
 }
 
 /**
+ * Get the current active BCP-47 locale
+ */
+export function getCurrentLocale(): 'fr-FR' | 'en-US' {
+  return i18next.language === 'fr' ? 'fr-FR' : 'en-US';
+}
+
+/**
+ * Get the first day of the week for the current locale.
+ * 0 = Sunday (en-US), 1 = Monday (fr-FR).
+ */
+export function getFirstDayOfWeek(): 0 | 1 {
+  return i18next.language === 'fr' ? 1 : 0;
+}
+
+/**
+ * Ensure date-only strings (yyyy-mm-dd) are treated as local time
+ * rather than UTC, preventing off-by-one day shifts in toLocaleDateString.
+ */
+function ensureLocalDate(dateString: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    return `${dateString}T00:00:00`;
+  }
+  return dateString;
+}
+
+/**
  * Format date according to current locale
  */
 export function formatDateFr(dateString: string | null): string {
   if (!dateString) return '-';
-  const locale = i18next.language === 'fr' ? 'fr-FR' : 'en-US';
-  return new Date(dateString).toLocaleDateString(locale, {
+  const locale = getCurrentLocale();
+  return new Date(ensureLocalDate(dateString)).toLocaleDateString(locale, {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric'
-  });
-}
-
-export function formatDate(dateString: string): string {
-  const locale = i18next.language === 'fr' ? 'fr-FR' : 'en-US';
-  return new Date(dateString).toLocaleDateString(locale, { 
-    day: '2-digit', 
-    month: '2-digit', 
-    year: 'numeric' 
   });
 }
 

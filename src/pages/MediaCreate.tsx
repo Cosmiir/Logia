@@ -2253,10 +2253,16 @@ const MediaCreate: React.FC = () => {
         }
       }
 
-      const attachmentPaths = attachmentFilePathsRef.current;
-      if (attachmentPaths.length > 0) {
+      // Upload new attachments in form order (preserves drag-and-drop reorder)
+      const newAttachmentsInForm = form.attachments.filter((a) => !a.isExisting && a.path);
+      const newAttachmentPaths = newAttachmentsInForm.map((a) => a.path!);
+      const uploadedAttachmentIds: number[] = [];
+      if (newAttachmentPaths.length > 0) {
         try {
-          await tauriApi.media.uploadAttachmentsFromPaths(targetMediaId!, attachmentPaths);
+          const uploadResults = await tauriApi.media.uploadAttachmentsFromPaths(targetMediaId!, newAttachmentPaths);
+          for (const result of uploadResults) {
+            uploadedAttachmentIds.push(result.attachmentId);
+          }
           attachmentFilePathsRef.current = [];
         } catch (attachmentErr) {
           console.error('Failed to upload attachments:', attachmentErr);
@@ -2286,13 +2292,18 @@ const MediaCreate: React.FC = () => {
         }
       }
 
-      // Reorder all existing attachments to match the form order
-      const orderedExistingIds = form.attachments
-        .filter((a) => a.isExisting && a.serverAttachmentId)
-        .map((a) => a.serverAttachmentId!);
-      if (orderedExistingIds.length > 0) {
+      // Reorder all attachments (existing + newly uploaded) to match the form order
+      let newAttachmentIdx = 0;
+      const orderedAllIds = form.attachments.map((a) => {
+        if (a.isExisting && a.serverAttachmentId) {
+          return a.serverAttachmentId!;
+        } else {
+          return uploadedAttachmentIds[newAttachmentIdx++] ?? -1;
+        }
+      }).filter((id) => id !== -1);
+      if (orderedAllIds.length > 0) {
         try {
-          await tauriApi.media.reorderAttachments(orderedExistingIds);
+          await tauriApi.media.reorderAttachments(orderedAllIds);
         } catch (reorderErr) {
           console.error('Failed to reorder attachments:', reorderErr);
         }

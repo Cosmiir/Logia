@@ -59,7 +59,7 @@ const ProfileSection: React.FC = () => {
       const selected = await open({
         directory: true,
         multiple: false,
-        title: 'Sélectionner un nouveau dossier de stockage',
+        title: t('settings.profile.selectStorageFolder'),
       });
       if (selected && typeof selected === 'string') {
         setIsChangingStorage(true);
@@ -84,7 +84,7 @@ const ProfileSection: React.FC = () => {
   const handleSetPassword = async () => {
     if (!activeProfile || !newPassword.trim()) return;
     if (newPassword !== confirmNewPassword) {
-      setPasswordMsg('Les mots de passe ne correspondent pas');
+      setPasswordMsg(t('settings.profile.passwordsDoNotMatch'));
       return;
     }
     setPasswordSaving(true);
@@ -94,9 +94,9 @@ const ProfileSection: React.FC = () => {
       setNewPassword('');
       setConfirmNewPassword('');
       setShowPasswordSection(false);
-      setPasswordMsg('Mot de passe défini');
+      setPasswordMsg(t('settings.profile.passwordSet'));
       setTimeout(() => setPasswordMsg(''), 3000);
-    } catch { setPasswordMsg('Erreur'); }
+    } catch { setPasswordMsg(t('common.error')); }
     setPasswordSaving(false);
   };
 
@@ -106,9 +106,9 @@ const ProfileSection: React.FC = () => {
     try {
       await profilesApi.update({ id: activeProfile.id, remove_password: true });
       updateProfile.mutate({ id: activeProfile.id });
-      setPasswordMsg('Mot de passe supprimé');
+      setPasswordMsg(t('settings.profile.passwordRemoved'));
       setTimeout(() => setPasswordMsg(''), 3000);
-    } catch { setPasswordMsg('Erreur'); }
+    } catch { setPasswordMsg(t('common.error')); }
     setPasswordSaving(false);
   };
 
@@ -181,10 +181,10 @@ const ProfileSection: React.FC = () => {
         switchProfile.mutate(switchPasswordProfileId);
         setSwitchPasswordProfileId(null);
       } else {
-        setSwitchPasswordError('Mot de passe incorrect');
+        setSwitchPasswordError(t('app.incorrectPassword'));
       }
     } catch {
-      setSwitchPasswordError('Erreur de vérification');
+      setSwitchPasswordError(t('app.verificationError'));
     }
     setSwitchVerifying(false);
   };
@@ -266,7 +266,7 @@ const ProfileSection: React.FC = () => {
                 disabled={passwordSaving}
                 className="px-3 py-1.5 text-[11px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-colors cursor-pointer disabled:opacity-40"
               >
-                Supprimer
+                {t('common.delete')}
               </button>
             )}
             <button
@@ -395,7 +395,7 @@ const ProfileSection: React.FC = () => {
                 }`}
               >
                 <div className="w-full h-full rounded-full overflow-hidden">
-                  <img src={dataUrl} alt="Custom avatar" className="w-full h-full object-cover" />
+                  <img src={dataUrl} alt={t('settings.profile.customAvatarAlt')} className="w-full h-full object-cover" />
                 </div>
               </button>
               {isActive && (
@@ -552,13 +552,13 @@ const ProfileSection: React.FC = () => {
                     disabled={switchVerifying || !switchPassword.trim()}
                     className="px-3 py-2 bg-primary hover:bg-primary-dark rounded-lg text-xs font-semibold text-white transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    {switchVerifying ? '...' : 'OK'}
+                    {switchVerifying ? '...' : t('common.ok')}
                   </button>
                   <button
                     onClick={() => setSwitchPasswordProfileId(null)}
                     className="px-2 py-2 text-xs text-gray-500 hover:text-gray-300 transition-colors cursor-pointer"
                   >
-                    Annuler
+                    {t('common.cancel')}
                   </button>
                   {switchPasswordError && (
                     <span className="text-[10px] text-red-400">{switchPasswordError}</span>
@@ -604,10 +604,10 @@ const ProfileSection: React.FC = () => {
           disabled={isChangingStorage}
           className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm text-white bg-primary hover:bg-primary-dark rounded-xl transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          {isChangingStorage ? 'Changement en cours...' : 'Changer le dossier de stockage'}
+          {isChangingStorage ? t('settings.profile.changingStorage') : t('settings.profile.changeStorageFolder')}
         </button>
         <p className="text-[10px] text-gray-600">
-          Attention : Changer le dossier de stockage déplacera toutes vos données vers le nouveau dossier.
+          {t('settings.profile.storageChangeWarning')}
         </p>
       </div>
 

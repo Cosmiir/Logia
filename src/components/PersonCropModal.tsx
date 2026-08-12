@@ -125,7 +125,7 @@ const PersonCropModal: React.FC<PersonCropModalProps> = ({ imageDataUrl, onConfi
           {natSize && (
             <img
               src={imageDataUrl}
-              alt="Preview"
+              alt={t('common.preview')}
               className="select-none pointer-events-none"
               style={imgStyle}
               draggable={false}

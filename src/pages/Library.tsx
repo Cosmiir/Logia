@@ -563,12 +563,13 @@ const NumericFilterPopup: React.FC<{
   step?: number;
   placeholder?: string;
 }> = ({ value, onChange, min = 180, max, step = 1, placeholder = '0' }) => {
+  const { t } = useTranslation();
   const ops: { op: NumericOperator; label: string; desc: string }[] = [
-    { op: 'gte', label: '≥', desc: 'Supérieur ou égal' },
-    { op: 'lte', label: '≤', desc: 'Inférieur ou égal' },
-    { op: 'eq', label: '=', desc: 'Égal à' },
-    { op: 'neq', label: '≠', desc: 'Différent de' },
-    { op: 'between', label: '↔', desc: 'Entre' },
+    { op: 'gte', label: '≥', desc: t('library.operators.gte') },
+    { op: 'lte', label: '≤', desc: t('library.operators.lte') },
+    { op: 'eq', label: '=', desc: t('library.operators.eq') },
+    { op: 'neq', label: '≠', desc: t('library.operators.neq') },
+    { op: 'between', label: '↔', desc: t('library.operators.between') },
   ];
 
   const handleSliderChange = (val: number | null, val2?: number | null) => {
@@ -615,7 +616,7 @@ const NumericFilterPopup: React.FC<{
       <div className={`grid gap-2 ${value.operator === 'between' ? 'grid-cols-2' : 'grid-cols-1'}`}>
         <div>
           <label className="text-[10px] font-medium text-white/40 mb-1 block">
-            {value.operator === 'between' ? 'Min' : 'Valeur'}
+            {t(value.operator === 'between' ? 'library.min' : 'library.value')}
           </label>
           <input
             type="number" min={min} max={max} step={step}
@@ -1410,10 +1411,23 @@ const MediaListRow: React.FC<{
               ? `${media.progress_current}/${media.progress_total}`
               : '0%'}
           </div>
-          <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-300"
-              style={{ width: `${Math.min(getProgressPercentage(media), 100)}%` }}
+          <div
+            className="w-full h-1 rounded-full overflow-hidden"
+            style={{
+              backgroundColor: 'rgba(var(--theme-accent-rgb), 0.15)',
+              boxShadow: 'inset 0 1px 1px rgba(0,0,0,0.12)',
+            }}
+          >
+            <div
+              className="h-full rounded-full transition-all duration-300"
+              style={{
+                width: `${Math.min(getProgressPercentage(media), 100)}%`,
+                backgroundImage: `
+                  linear-gradient(180deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0) 50%),
+                  linear-gradient(90deg, var(--theme-accent-dark), var(--theme-accent))
+                `,
+                boxShadow: '0 0 6px rgba(var(--theme-accent-rgb), 0.45)',
+              }}
             />
           </div>
         </div>
@@ -2033,6 +2047,16 @@ const Library: React.FC = () => {
   const handleContentMouseDown = useCallback((e: React.MouseEvent) => {
     // Only start drag selection on left click with no modifiers
     if (e.button !== 0 || e.ctrlKey || e.shiftKey || e.metaKey) return;
+    // Exclude clicks on the scrollbar (vertical or horizontal) — scrollbar
+    // clicks fire on the <main> itself but land beyond clientWidth/clientHeight,
+    // which would create a selection box outside the content and trigger an
+    // unwanted horizontal scrollbar.
+    const scrollContainer = e.currentTarget as HTMLElement;
+    const scrollRect = scrollContainer.getBoundingClientRect();
+    if (
+      e.clientX > scrollRect.left + scrollContainer.clientWidth ||
+      e.clientY > scrollRect.top + scrollContainer.clientHeight
+    ) return;
     const target = e.target as HTMLElement;
     // Don't start drag on interactive elements or cards
     const isOnCard = !!target.closest('[data-media-id]');

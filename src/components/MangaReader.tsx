@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import i18next from 'i18next';
 import {
   X,
   ChevronLeft,
@@ -663,7 +664,7 @@ const WebtoonPage: React.FC<WebtoonPageProps> = ({ name, index, dataUrl, loadPag
       {isVisible && dataUrl ? (
         <img
           src={dataUrl}
-          alt={`Page ${index + 1}`}
+          alt={i18next.t('mangaReader.pageNumber', { number: index + 1 })}
           className="w-full h-auto select-none"
           draggable={false}
           loading="lazy"
@@ -671,7 +672,7 @@ const WebtoonPage: React.FC<WebtoonPageProps> = ({ name, index, dataUrl, loadPag
       ) : (
         <div className="py-20 flex flex-col items-center justify-center gap-2">
           <Loader2 className="w-6 h-6 animate-spin text-white/20" />
-          <span className="text-[10px] text-white/10 uppercase tracking-wider font-semibold">Page {index + 1}</span>
+          <span className="text-[10px] text-white/10 uppercase tracking-wider font-semibold">{i18next.t('mangaReader.pageNumber', { number: index + 1 })}</span>
         </div>
       )}
     </div>

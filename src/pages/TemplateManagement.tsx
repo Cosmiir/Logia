@@ -200,7 +200,7 @@ const TemplateManagement: React.FC = () => {
                 {/* Header */}
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-                    {isCreating ? 'Nouveau modèle' : 'Modifier le modèle'}
+                    {isCreating ? t('templateManagement.newTemplate') : t('templateManagement.editTemplate')}
                   </h2>
                   <button
                     type="button"
@@ -294,7 +294,7 @@ const TemplateManagement: React.FC = () => {
                     ) : (
                       <Save className="w-4 h-4" />
                     )}
-                    {isCreating ? 'Créer' : 'Enregistrer'}
+                    {isCreating ? t('common.create') : t('common.save')}
                   </button>
                 </div>
               </div>
@@ -353,7 +353,7 @@ const TemplateManagement: React.FC = () => {
             ) : filteredTemplates?.length === 0 ? (
               <div className="text-center py-12 text-white/20">
                 <FileText className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                <p className="text-sm">{search ? 'Aucun modèle trouvé' : 'Aucun modèle créé'}</p>
+                <p className="text-sm">{search ? t('templateManagement.noTemplateFound') : t('templateManagement.noTemplateCreated')}</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-3">
@@ -384,7 +384,7 @@ const TemplateManagement: React.FC = () => {
                         <h3 className="font-semibold text-white text-sm truncate">{template.name}</h3>
                         {template.is_default && (
                           <span className="text-[9px] px-1 py-0.5 rounded-full bg-white/10 text-white/50">
-                            Défaut
+                            {t('templateManagement.default')}
                           </span>
                         )}
                       </div>
@@ -430,12 +430,12 @@ const TemplateManagement: React.FC = () => {
       <ConfirmDialog
         open={templateToDelete !== null}
         onClose={() => setTemplateToDelete(null)}
-        title={`Supprimer "${templateToDeleteName}" ?`}
-        description="Ce modèle sera définitivement supprimé."
+        title={t('templateManagement.confirmDeleteTitle', { name: templateToDeleteName })}
+        description={t('templateManagement.deleteDescription')}
         iconColor="#ef4444"
         actions={[
           {
-            label: deleteMutation.isPending ? 'Suppression...' : 'Supprimer',
+            label: deleteMutation.isPending ? t('templateManagement.deleting') : t('common.delete'),
             variant: 'danger',
             icon: Trash2,
             onClick: handleDelete,
