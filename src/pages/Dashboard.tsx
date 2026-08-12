@@ -159,10 +159,6 @@ const Dashboard: React.FC = () => {
 
       {/* Main Content */}
       <MainContent>
-        {/* TEST BANNER - Temporary for v1.0.7 update test */}
-        <div className="mb-6 p-4 rounded-xl bg-red-500/20 border-2 border-red-500/50 flex items-center justify-center">
-          <span className="text-2xl font-bold text-red-400 tracking-wider">TEST - VERSION 1.0.7</span>
-        </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" data-context-menu-open={!!mediaMenu}>
           {/* Colonne gauche */}
           <div className="lg:col-span-2 space-y-8">
