@@ -5,7 +5,7 @@ All notable changes to Logia will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.6] - 2026-08-06
+## [1.0.6] - 2026-08-12
 
 ### Fixed
 - MediaCreate attachment sort order on import: when importing new attachments and reordering them via drag-and-drop before saving, the sort order was lost on first save. Root cause: new attachments were uploaded using `attachmentFilePathsRef` (import order) instead of `form.attachments` (form order after drag-and-drop), and the `reorderAttachments` call only covered existing (already in DB) attachments — newly uploaded ones kept their sequential DB insert positions. Fixed by deriving upload paths from `form.attachments` in form order and including newly uploaded attachment IDs in the final `reorderAttachments` call.
