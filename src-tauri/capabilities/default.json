@@ -19,6 +19,9 @@
     "dialog:default",
     "dialog:allow-save",
     "dialog:allow-open",
-    "fs:scope-appdata-recursive"
+    "fs:scope-appdata-recursive",
+    "updater:default",
+    "process:default",
+    "process:allow-restart"
   ]
 }

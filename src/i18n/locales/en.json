@@ -239,8 +239,27 @@
       "database": "Database",
       "state": "State",
       "animations": "Animations",
-      "builtWithLove": "Built with passion — Open Source"
+      "builtWithLove": "Built with passion — Open Source",
+      "updates": "Updates"
     }
+  },
+  "update": {
+    "available": "Update available",
+    "version": "Version {{version}} is available",
+    "updateNow": "Update now",
+    "downloadManual": "Download manually",
+    "ignore": "Ignore",
+    "skipVersion": "Don't remind me for this version",
+    "upToDate": "Logia is up to date",
+    "upToDateDescription": "You are already running the latest version of Logia.",
+    "checkButton": "Check for updates",
+    "checkDescription": "Look for a new version of Logia",
+    "checking": "Checking…",
+    "downloading": "Downloading… {{progress}}%",
+    "installing": "Installing…",
+    "releaseNotes": "Release notes",
+    "error": "Could not check for updates",
+    "errorDescription": "The update check failed. Check your internet connection or try again later."
   },
   "createProfile": {
     "welcome": "Welcome!",

@@ -239,8 +239,27 @@
       "database": "Base de données",
       "state": "State",
       "animations": "Animations",
-      "builtWithLove": "Construit avec passion — Open Source"
+      "builtWithLove": "Construit avec passion — Open Source",
+      "updates": "Mises à jour"
     }
+  },
+  "update": {
+    "available": "Mise à jour disponible",
+    "version": "Version {{version}} est disponible",
+    "updateNow": "Mettre à jour maintenant",
+    "downloadManual": "Télécharger manuellement",
+    "ignore": "Ignorer",
+    "skipVersion": "Ne plus me rappeler pour cette version",
+    "upToDate": "Logia est à jour",
+    "upToDateDescription": "Vous utilisez déjà la dernière version de Logia.",
+    "checkButton": "Vérifier les mises à jour",
+    "checkDescription": "Rechercher une nouvelle version de Logia",
+    "checking": "Vérification…",
+    "downloading": "Téléchargement… {{progress}}%",
+    "installing": "Installation en cours…",
+    "releaseNotes": "Notes de version",
+    "error": "Impossible de vérifier les mises à jour",
+    "errorDescription": "La vérification des mises à jour a échoué. Vérifiez votre connexion internet ou réessayez plus tard."
   },
   "createProfile": {
     "welcome": "Bienvenue !",

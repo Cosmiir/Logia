@@ -10,6 +10,7 @@ import { useAppStatus } from './hooks/useAppStatus';
 import { useAutoGenerateNotifications } from './hooks/useTriggerNotifications';
 import { useGlobalShortcuts } from './hooks/useGlobalShortcuts';
 import { useGravityUII18n } from './hooks/useGravityUII18n';
+import { useUpdateCheck } from './hooks/useUpdateCheck';
 import { profilesApi } from './lib/tauri-api';
 import TitleBar from './components/TitleBar';
 import Onboarding from './components/Onboarding';
@@ -19,6 +20,7 @@ import Library from './pages/Library';
 import Settings from './pages/Settings';
 import StorageMissingScreen from './components/StorageMissingScreen';
 import TutorialOverlay from './components/tutorial/TutorialOverlay';
+import UpdateModal from './components/UpdateModal';
 import { useTutorialStore } from './stores/useTutorialStore';
 import type { Profile } from './types';
 
@@ -88,6 +90,7 @@ function App() {
   useInitializeSettings(); // Initialize settings store for active profile
   useGlobalShortcuts();
   useGravityUII18n(); // Keep Gravity UI components in sync with React i18n
+  const updateCheck = useUpdateCheck(true);
 
   // Sync animations class with user preference (ignores Windows prefers-reduced-motion)
   useEffect(() => {
@@ -222,6 +225,17 @@ function App() {
         </motion.div>
       </AnimatePresence>
       <TutorialOverlay />
+      <UpdateModal
+        open={updateCheck.status === 'available'}
+        status={updateCheck.status}
+        update={updateCheck.update}
+        error={updateCheck.error}
+        progress={updateCheck.progress}
+        onInstall={updateCheck.downloadAndInstall}
+        onIgnore={updateCheck.ignoreForNow}
+        onSkipVersion={updateCheck.skipVersion}
+        onClose={updateCheck.ignoreForNow}
+      />
     </>
   );
 }

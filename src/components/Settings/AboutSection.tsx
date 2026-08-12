@@ -1,18 +1,40 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Heart, Github, Coffee } from 'lucide-react';
+import { Heart, Github, Coffee, RefreshCw, Loader2 } from 'lucide-react';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import logiaLogo from '@/assets/LOGIA.png';
 import { getVersion } from '@tauri-apps/api/app';
 import { SectionTitle, Divider, SettingRow } from './shared';
+import { useUpdateCheck } from '@/hooks/useUpdateCheck';
+import UpdateModal from '@/components/UpdateModal';
 
 const AboutSection: React.FC = () => {
   const { t } = useTranslation();
   const [appVersion, setAppVersion] = useState('1.0.0');
+  // Manual check (no auto-check on mount — App.tsx already does the launch check)
+  const updateCheck = useUpdateCheck(false);
+  const [manualModalOpen, setManualModalOpen] = useState(false);
 
   useEffect(() => {
     getVersion().then(setAppVersion).catch(() => {});
   }, []);
+
+  const handleManualCheck = () => {
+    setManualModalOpen(true);
+    updateCheck.runCheck(true); // ignoreSkip = true
+  };
+
+  const isChecking = updateCheck.status === 'checking';
+  // Modal stays open while checking, available, downloading, installing, or showing an error/result
+  const modalOpen =
+    manualModalOpen &&
+    (updateCheck.status === 'checking' ||
+      updateCheck.status === 'available' ||
+      updateCheck.status === 'not-available' ||
+      updateCheck.status === 'error' ||
+      updateCheck.status === 'downloading' ||
+      updateCheck.status === 'installing');
+
   return (
     <>
       {/* App identity */}
@@ -28,6 +50,34 @@ const AboutSection: React.FC = () => {
       <p className="text-sm text-gray-400 leading-relaxed mb-6">
         {t('settings.about.description')}
       </p>
+
+      <Divider />
+
+      <SectionTitle>{t('settings.about.updates')}</SectionTitle>
+      <div className="space-y-1 mb-2">
+        <SettingRow
+          icon={RefreshCw}
+          iconColor="text-primary"
+          iconBg="bg-primary/10"
+          title={t('update.checkButton')}
+          description={t('update.checkDescription')}
+        >
+          <button
+            onClick={handleManualCheck}
+            disabled={isChecking}
+            className="text-xs text-gray-400 hover:text-white transition-colors cursor-pointer disabled:opacity-40 flex items-center gap-1.5"
+          >
+            {isChecking ? (
+              <>
+                <Loader2 className="w-3 h-3 animate-spin" />
+                {t('update.checking')}
+              </>
+            ) : (
+              <>{t('settings.about.open')} &rarr;</>
+            )}
+          </button>
+        </SettingRow>
+      </div>
 
       <Divider />
 
@@ -83,6 +133,18 @@ const AboutSection: React.FC = () => {
         <Heart className="w-3.5 h-3.5 text-pink-400" />
         <span className="text-xs">{t('settings.about.builtWithLove')}</span>
       </div>
+
+      <UpdateModal
+        open={modalOpen}
+        status={updateCheck.status}
+        update={updateCheck.update}
+        error={updateCheck.error}
+        progress={updateCheck.progress}
+        onInstall={updateCheck.downloadAndInstall}
+        onIgnore={() => { setManualModalOpen(false); updateCheck.ignoreForNow(); }}
+        onSkipVersion={() => { setManualModalOpen(false); updateCheck.skipVersion(); }}
+        onClose={() => { setManualModalOpen(false); updateCheck.reset(); }}
+      />
     </>
   );
 };

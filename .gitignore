@@ -31,3 +31,8 @@ debug/
 
 # Temporary files
 temp/
+
+# Tauri signing keys (NEVER commit these)
+~/
+*.key
+*.key.pub
