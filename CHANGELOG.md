@@ -5,6 +5,14 @@ All notable changes to Logia will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.7] - 2026-08-15
+
+### Fixed
+- Onboarding (CreateProfile) content clipping at high Windows display scaling: at 150% Windows "Mise à l'échelle" (and similar zoom levels), the onboarding flow clipped its content — the "Suivant" button was half-cut on step 3 (Profile), and the bottom of step 4 (Personalization, from the "Display density" card downward) was invisible and unreachable. Root cause: `CreateProfile` wrapped its content in a plain `<div className="flex-1 flex flex-col p-8">` with no `overflow-y-auto`, while `AppShell` enforces `overflow-hidden` at the root — so any content exceeding the viewport height was silently clipped with no scrollbar. All other pages (Settings, Dashboard, Library, etc.) use the `MainContent` layout component, which provides `overflow-y-auto`, `custom-scrollbar`, and `scrollbar-gutter: stable`. Refactored `CreateProfile` to use `MainContent` like the rest of the app, bringing consistent scroll behavior, styled scrollbar, and stable layout (no width jump when the scrollbar appears/disappears). The decorative glow backdrop was switched from `absolute inset-0` to `fixed inset-0` so it stays centered in the viewport during scroll instead of drifting with the content.
+
+### Changed
+- Silent (in-app) updates: the updater now installs new versions **silently** on Windows, with no installer window shown to the user (behavior similar to Discord). Previously, the updater used the default `passive` install mode, which displayed a separate NSIS installer window with a progress bar during installation. Switched `plugins.updater.windows.installMode` to `quiet` in `tauri.conf.json` so the NSIS installer runs invisibly (`/S /UPDATE`): the user only sees the existing in-app progress bar in `UpdateModal` during download, then the app exits, the installer overwrites the binary in the background, and the app relaunches automatically on the new version. No UAC prompt is shown. Also made the NSIS bundle install mode explicit (`bundle.windows.nsis.installMode = "currentUser"`, install in `%LOCALAPPDATA%`) as a guard against regressions — the `quiet` install mode cannot elevate admin privileges on its own, so a `currentUser` install is required. See `RELEASE.md` for details.
+
 ## [1.0.6] - 2026-08-12
 
 ### Added

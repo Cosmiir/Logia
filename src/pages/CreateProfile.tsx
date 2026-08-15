@@ -5,7 +5,7 @@ import { useCreateProfile, useSwitchProfile, useProfiles } from '@/hooks/useProf
 import { useNavigationStore } from '@/stores/useNavigationStore';
 import { getSettingsStore, type CardDensity } from '@/stores/useSettingsStore';
 import { useProfileSettingsStore } from '@/hooks/useProfileSettingsStore';
-import { AppShell } from '@/components/Layout';
+import { AppShell, MainContent } from '@/components/Layout';
 import { dataApi } from '@/lib/tauri-api';
 import Stepper, { Step } from '@/components/Stepper';
 import LanguageStep from '@/components/Onboarding/LanguageStep';
@@ -254,60 +254,59 @@ const CreateProfile: React.FC<CreateProfileProps> = ({ isOnboarding = false, onC
     }
   };
 
-  const content = (
-    <div className="flex-1 flex flex-col p-8">
-      {/* Glow backdrop */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px]" />
-      </div>
-
-      <div className="relative z-10 flex flex-col gap-6 w-full max-w-5xl mx-auto">
-        {/* Title */}
-        <div className="text-center">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <Sparkles className="w-5 h-5 text-primary" />
-            <h1 className="text-xl font-bold text-white">
-              {isOnboarding ? t('createProfile.welcome') : t('createProfile.newProfile')}
-            </h1>
-          </div>
-          <p className="text-sm text-gray-400">
-            {isOnboarding
-              ? t('createProfile.onboardingSubtitle')
-              : t('createProfile.newProfileSubtitle')
-            }
-          </p>
+  return (
+    <AppShell>
+      <MainContent>
+        {/* Glow backdrop — fixed to viewport so it stays centered regardless of scroll */}
+        <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-0">
+          <div className="w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px]" />
         </div>
 
-        {/* Stepper */}
-        {isOnboarding && (
-          <Stepper
-            steps={currentSteps}
-            currentStep={currentStep}
-            onStepClick={handleStepClick}
-            lineWidths={lineWidths}
-          />
-        )}
-
-        {/* Step content */}
-        {renderStep()}
-
-        {/* Footer */}
-        {!isOnboarding && (
-          <div className="flex items-center justify-center gap-4">
-            <button
-              onClick={goBack}
-              className="text-xs text-gray-500 hover:text-gray-300 transition-colors cursor-pointer"
-            >
-              {t('common.cancel')} {t('createProfile.andGoBack')}
-            </button>
+        <div className="relative z-10 flex flex-col gap-6 w-full max-w-5xl mx-auto">
+          {/* Title */}
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              <h1 className="text-xl font-bold text-white">
+                {isOnboarding ? t('createProfile.welcome') : t('createProfile.newProfile')}
+              </h1>
+            </div>
+            <p className="text-sm text-gray-400">
+              {isOnboarding
+                ? t('createProfile.onboardingSubtitle')
+                : t('createProfile.newProfileSubtitle')
+              }
+            </p>
           </div>
-        )}
-      </div>
-    </div>
-  );
 
-  // Wrap in AppShell
-  return <AppShell>{content}</AppShell>;
+          {/* Stepper */}
+          {isOnboarding && (
+            <Stepper
+              steps={currentSteps}
+              currentStep={currentStep}
+              onStepClick={handleStepClick}
+              lineWidths={lineWidths}
+            />
+          )}
+
+          {/* Step content */}
+          {renderStep()}
+
+          {/* Footer */}
+          {!isOnboarding && (
+            <div className="flex items-center justify-center gap-4">
+              <button
+                onClick={goBack}
+                className="text-xs text-gray-500 hover:text-gray-300 transition-colors cursor-pointer"
+              >
+                {t('common.cancel')} {t('createProfile.andGoBack')}
+              </button>
+            </div>
+          )}
+        </div>
+      </MainContent>
+    </AppShell>
+  );
 };
 
 export default CreateProfile;

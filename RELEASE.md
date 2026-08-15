@@ -27,8 +27,8 @@ A Tauri signing keypair is required for the updater to verify update integrity.
 
 2. Commit the version bump, then tag and push:
    ```bash
-   git tag v1.0.6
-   git push origin v1.0.6
+   git tag v1.0.7
+   git push origin v1.0.7
    ```
 
 3. The `Release` workflow (`.github/workflows/release.yml`) triggers automatically on the `v*` tag. It:
@@ -38,6 +38,18 @@ A Tauri signing keypair is required for the updater to verify update integrity.
    - Publishes the GitHub Release (non-draft)
 
 4. Once the workflow completes, the release is live. Existing users on a signed version will see the update modal on next launch.
+
+## Silent (in-app) updates
+
+The updater installs new versions **silently** — no installer window is shown to the user, similar to how Discord updates. Concretely:
+
+- The download runs in-app and the existing `UpdateModal` shows a progress bar (0–100%).
+- Once the download finishes, the NSIS installer runs in `quiet` mode (`/S /UPDATE`): no window, no UAC prompt, no user interaction.
+- The app exits, the installer overwrites the binary, and the app relaunches automatically on the new version.
+
+This works because the bundle is built with `bundle.windows.nsis.installMode = "currentUser"` (install in `%LOCALAPPDATA%`, no admin privileges required). The `quiet` install mode (`plugins.updater.windows.installMode`) cannot elevate privileges on its own, so the `currentUser` install mode is required and is set explicitly in `tauri.conf.json` as a guard against regressions.
+
+If the NSIS install mode is ever changed to `perMachine` or `both`, the silent updater will break (UAC cannot be elevated silently) and the updater config must be revisited.
 
 ## Bootstrapping auto-update
 
