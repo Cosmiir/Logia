@@ -64,6 +64,14 @@ pub fn update_color(conn: &Connection, genre_id: i64, color: &str) -> Result<()>
     Ok(())
 }
 
+pub fn update_name(conn: &Connection, genre_id: i64, name: &str) -> Result<()> {
+    conn.execute(
+        "UPDATE genres SET name = ?1 WHERE id = ?2",
+        params![name, genre_id],
+    )?;
+    Ok(())
+}
+
 pub fn delete(conn: &Connection, genre_id: i64) -> Result<()> {
     // CASCADE on FK handles media_genres cleanup automatically
     conn.execute("DELETE FROM genres WHERE id = ?1", params![genre_id])?;

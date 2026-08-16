@@ -3,7 +3,7 @@
 <img src="./src/assets/LOGIA.png" alt="Logia Logo" width="80" />
 
 **Track your media progression and organize your collections.**  
-Catalog and manage your movies, series, anime, manga, and video games, 100% offline.
+Catalog and manage your movies, series, anime, manga, and video games. Offline by default, with optional API enrichment.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/Cosmiir/logia?color=purple)](https://github.com/Cosmiir/logia/releases)
@@ -16,7 +16,9 @@ Catalog and manage your movies, series, anime, manga, and video games, 100% offl
 
 ## About
 
-Logia is a **100% offline** desktop application for tracking your progression across all your media. No account, no cloud, no external API: your data stays on your machine, in a local SQLite database.
+Logia is an **offline-by-default** desktop application for tracking your progression across all your media. No account, no cloud: your data stays on your machine, in a local SQLite database.
+
+API enrichment is entirely optional, you can enable it per-collection to automatically pre-fill media details (title, creator, date, synopsis, images) from external sources like TMDB, Jikan, AniList, TVMaze, MusicBrainz, and more. API keys (when required) are stored locally and never leave your machine.
 
 Built for people who consume varied media (movies, series, anime, manga, video games) and want a single place to track, rate, and analyze everything.
 
@@ -26,7 +28,8 @@ Built for people who consume varied media (movies, series, anime, manga, video g
 - Create unlimited collections with custom names, icons, and colors
 - Each collection has configurable labels (creator, date, progression unit, etc.)
 - Fully user-driven: no predefined collections, you build your own library from scratch
-- 100% manual entry: no dependency on any external API
+- 100% manual entry by default: no dependency on any external API
+- Optional API enrichment: map collections to external providers (TMDB, Jikan, AniList, TVMaze, MusicBrainz, iTunes, RAWG, TheGamesDB, OMDb) to auto-fill media details on creation
 
 ### 📊 Dual Status System
 - **Progress status**: Not Started, In Progress, On Hold, Completed, Abandoned
@@ -84,15 +87,15 @@ Built for people who consume varied media (movies, series, anime, manga, video g
 
 | Dashboard | Library |
 |-----------|---------|
-| ![Dashboard](./screenshots/dashboard.png) | ![Library](./screenshots/library.png) |
+| <img src="./screenshots/dashboard.png" width="400"/> | <img src="./screenshots/library.png" width="400"/> |
 
 | Media Detail | Statistics |
 |--------------|------------|
-| ![Media](./screenshots/media.png) | ![Stats](./screenshots/stats.png) |
+| <img src="./screenshots/media.png" width="400"/> | <img src="./screenshots/stats.png" width="400"/> |
 
 | Personalization | Settings |
 |-----------------|----------|
-| ![Personalization](./screenshots/personalization.png) | ![Profile](./screenshots/profile.png) |
+| <img src="./screenshots/personalization.png" width="400"/> | <img src="./screenshots/profile.png" width="400"/> |
 
 ## Installation
 

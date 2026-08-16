@@ -31,6 +31,9 @@ import type {
   Notification,
   CreateNotificationDto,
   NotificationPreferences,
+  ProviderInfo,
+  ApiSearchResult,
+  ApiMediaDetail,
 } from '@/types';
 import type {
   ReviewTemplate,
@@ -392,6 +395,10 @@ export const genresApi = {
     return invoke('update_genre_color', { genreId, color });
   },
 
+  async updateName(genreId: number, name: string): Promise<void> {
+    return invoke('update_genre_name', { genreId, name });
+  },
+
   async getAll(): Promise<Genre[]> {
     return invoke('get_all_genres');
   },
@@ -717,6 +724,26 @@ export const reviewTemplatesApi = {
   },
 };
 
+// API Enrichment
+export const apiEnrichmentApi = {
+  async getProviders(): Promise<ProviderInfo[]> {
+    return invoke('get_api_providers');
+  },
+
+  async search(providers: string[], query: string): Promise<ApiSearchResult[]> {
+    return invoke('search_api_media', { providers, query });
+  },
+
+  async getDetail(provider: string, id: string): Promise<ApiMediaDetail> {
+    return invoke('get_api_media_detail', { provider, id });
+  },
+
+  async downloadImage(url: string, mediaId: number): Promise<{ imageId: number }> {
+    const result = await invoke<Record<string, unknown>>('download_api_image_to_media', { url, mediaId });
+    return { imageId: Number(result.imageId) };
+  },
+};
+
 // Export all APIs
 export const tauriApi = {
   collections: collectionsApi,
@@ -730,4 +757,5 @@ export const tauriApi = {
   notifications: notificationsApi,
   settings: settingsApi,
   reviewTemplates: reviewTemplatesApi,
+  apiEnrichment: apiEnrichmentApi,
 };

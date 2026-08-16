@@ -3,7 +3,7 @@ use crate::models::{Collection, CreateCollectionDto, UpdateCollectionDto};
 
 pub fn get_all(conn: &Connection) -> Result<Vec<Collection>> {
     let mut stmt = conn.prepare(
-        "SELECT id, name, icon, color, creator_label, date_label, progression_unit, progression_label, progression_short_label, replay_date_label, duration_label, plural_with_s, consumption_verb, monthly_capacity, position, created_at 
+        "SELECT id, name, icon, color, creator_label, date_label, progression_unit, progression_label, progression_short_label, replay_date_label, duration_label, plural_with_s, consumption_verb, monthly_capacity, position, created_at, api_providers 
          FROM collections 
          ORDER BY position ASC"
     )?;
@@ -26,6 +26,7 @@ pub fn get_all(conn: &Connection) -> Result<Vec<Collection>> {
             monthly_capacity: row.get(13)?,
             position: row.get(14)?,
             created_at: row.get(15)?,
+            api_providers: row.get(16)?,
         })
     })?
     .collect::<Result<Vec<_>>>()?;
@@ -35,7 +36,7 @@ pub fn get_all(conn: &Connection) -> Result<Vec<Collection>> {
 
 pub fn get_by_id(conn: &Connection, collection_id: i64) -> Result<Option<Collection>> {
     let mut stmt = conn.prepare(
-        "SELECT id, name, icon, color, creator_label, date_label, progression_unit, progression_label, progression_short_label, replay_date_label, duration_label, plural_with_s, consumption_verb, monthly_capacity, position, created_at 
+        "SELECT id, name, icon, color, creator_label, date_label, progression_unit, progression_label, progression_short_label, replay_date_label, duration_label, plural_with_s, consumption_verb, monthly_capacity, position, created_at, api_providers 
          FROM collections 
          WHERE id = ?1"
     )?;
@@ -58,6 +59,7 @@ pub fn get_by_id(conn: &Connection, collection_id: i64) -> Result<Option<Collect
             monthly_capacity: row.get(13)?,
             position: row.get(14)?,
             created_at: row.get(15)?,
+            api_providers: row.get(16)?,
         })
     }).optional()?;
 
@@ -85,10 +87,11 @@ pub fn insert(conn: &Connection, dto: CreateCollectionDto) -> Result<i64> {
     let plural_with_s = dto.plural_with_s.unwrap_or(false);
     let consumption_verb = dto.consumption_verb;
     let monthly_capacity = dto.monthly_capacity;
+    let api_providers = dto.api_providers;
     conn.execute(
-        "INSERT INTO collections (name, icon, color, creator_label, date_label, progression_unit, progression_label, progression_short_label, replay_date_label, duration_label, plural_with_s, consumption_verb, monthly_capacity, position) 
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
-        params![dto.name, dto.icon, color, creator_label, date_label, progression_unit, progression_label, progression_short_label, replay_date_label, duration_label, plural_with_s, consumption_verb, monthly_capacity, max_position + 1],
+        "INSERT INTO collections (name, icon, color, creator_label, date_label, progression_unit, progression_label, progression_short_label, replay_date_label, duration_label, plural_with_s, consumption_verb, monthly_capacity, position, api_providers) 
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
+        params![dto.name, dto.icon, color, creator_label, date_label, progression_unit, progression_label, progression_short_label, replay_date_label, duration_label, plural_with_s, consumption_verb, monthly_capacity, max_position + 1, api_providers],
     )?;
 
     Ok(conn.last_insert_rowid())
@@ -149,6 +152,10 @@ pub fn update(conn: &Connection, dto: UpdateCollectionDto) -> Result<()> {
     if let Some(monthly_capacity) = dto.monthly_capacity {
         updates.push("monthly_capacity = ?");
         params.push(Box::new(monthly_capacity));
+    }
+    if let Some(api_providers) = dto.api_providers {
+        updates.push("api_providers = ?");
+        params.push(Box::new(api_providers));
     }
 
     if updates.is_empty() {

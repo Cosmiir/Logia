@@ -232,6 +232,13 @@ const GravityMarkdownEditor = forwardRef<GravityMarkdownEditorHandle, GravityMar
       return () => { editor.off('change', handleChange); };
     }, [editor, handleChange]);
 
+    // Sync external value changes into editor
+    useEffect(() => {
+      if (value !== undefined && value !== editor.getValue()) {
+        editor.replace(value);
+      }
+    }, [value, editor]);
+
     // Function to trigger opening the media search modal at current cursor position
     const triggerMediaModal = useCallback(() => {
       /* --- WYSIWYG (ProseMirror) --- */

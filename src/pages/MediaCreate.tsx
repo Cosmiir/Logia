@@ -60,6 +60,7 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import CoverCropModal from '@/components/CoverCropModal';
 import CustomDatePicker from '@/components/CustomDatePicker';
 import LanguagePicker from '@/components/LanguagePicker';
+import ApiSearchModal from '@/components/ApiSearchModal';
 import GravityMarkdownEditor, { type GravityMarkdownEditorHandle } from '@/components/MarkdownEditor/GravityMarkdownEditor';
 import { useNavigationStore } from '@/stores/useNavigationStore';
 import { useTutorialStore, isTutorialSectionLocked } from '@/stores/useTutorialStore';
@@ -71,8 +72,9 @@ import { useCreateMedia, useUpdateMedia, useMediaDetail } from '@/hooks/useMedia
 import { getCollectionIconComponent } from '@/components/CollectionIcons';
 import { getIconById } from '@/lib/collection-icons';
 import { tauriApi } from '@/lib/tauri-api';
+import { parseApiProviders } from '@/lib/api-providers';
 import i18next from 'i18next';
-import { formatProgression, formatFileSize } from '@/lib/utils';
+import { formatProgression, formatFileSize, toTitleCase } from '@/lib/utils';
 import {
   MEDIA_TITLE_MAX,
   MAX_GENRES_PER_MEDIA,
@@ -80,7 +82,7 @@ import {
   MAX_RATING,
   MIN_RATING,
 } from '@/lib/constants';
-import type { Genre, MediaAttachment, MediaCredit, Person } from '@/types';
+import type { Genre, MediaAttachment, MediaCredit, Person, ApiMediaDetail } from '@/types';
 
 /* ================================================================== */
 /*  Types                                                              */
@@ -92,6 +94,7 @@ interface GalleryImage {
   isExisting?: boolean; // true for images already on the server
   serverImageId?: number; // media_images.id from the backend
   filePath?: string; // original local path for dropped files
+  apiUrl?: string; // remote API URL pending download on save
 }
 
 
@@ -512,8 +515,25 @@ const CreatorSelector: React.FC<{
 const SortableGenrePill: React.FC<{
   genre: Genre;
   onRemove: (genreId: number) => void;
-}> = ({ genre, onRemove }) => {
+  onRename?: (genreId: number, newName: string) => Promise<void>;
+}> = ({ genre, onRemove, onRename }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: genre.id });
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(genre.name);
+
+  useEffect(() => {
+    setEditName(genre.name);
+  }, [genre.name]);
+
+  const handleSaveName = async () => {
+    const trimmed = editName.trim();
+    if (trimmed && trimmed !== genre.name && onRename) {
+      await onRename(genre.id, trimmed);
+    } else {
+      setEditName(genre.name);
+    }
+    setIsEditing(false);
+  };
 
   return (
     <span
@@ -525,7 +545,15 @@ const SortableGenrePill: React.FC<{
         zIndex: isDragging ? 50 : 'auto',
         position: 'relative',
       }}
-      className="inline-flex w-full"
+      className="inline-flex w-full group"
+      onContextMenu={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (onRename) {
+          setIsEditing(true);
+        }
+      }}
+      title="Clic gauche pour réordonner · Clic droit ou icône crayon pour modifier"
     >
       <span
         className="inline-flex items-center gap-1.5 pl-2 pr-1.5 py-1 rounded-full text-xs font-medium select-none w-full"
@@ -535,37 +563,81 @@ const SortableGenrePill: React.FC<{
           color: `color-mix(in srgb, ${genre.color} 75%, white)`,
           boxShadow: isDragging ? `0 8px 24px ${genre.color}50, 0 2px 8px rgba(0,0,0,0.5)` : undefined,
           transform: isDragging ? 'scale(1.05)' : undefined,
-          cursor: isDragging ? 'grabbing' : 'grab',
+          cursor: isDragging ? 'grabbing' : isEditing ? 'text' : 'grab',
           transition: 'background-color 0.15s, border-color 0.15s, box-shadow 0.15s',
           overflow: 'hidden',
         }}
         {...attributes}
         {...listeners}
       >
-        <span className="flex flex-col gap-[2px] opacity-30 shrink-0" style={{ pointerEvents: 'none' }}>
-          <span className="flex gap-[2px]">
-            <span className="w-[2px] h-[2px] rounded-full bg-current" />
-            <span className="w-[2px] h-[2px] rounded-full bg-current" />
+        {!isEditing && (
+          <span className="flex flex-col gap-[2px] opacity-30 shrink-0" style={{ pointerEvents: 'none' }}>
+            <span className="flex gap-[2px]">
+              <span className="w-[2px] h-[2px] rounded-full bg-current" />
+              <span className="w-[2px] h-[2px] rounded-full bg-current" />
+            </span>
+            <span className="flex gap-[2px]">
+              <span className="w-[2px] h-[2px] rounded-full bg-current" />
+              <span className="w-[2px] h-[2px] rounded-full bg-current" />
+            </span>
+            <span className="flex gap-[2px]">
+              <span className="w-[2px] h-[2px] rounded-full bg-current" />
+              <span className="w-[2px] h-[2px] rounded-full bg-current" />
+            </span>
           </span>
-          <span className="flex gap-[2px]">
-            <span className="w-[2px] h-[2px] rounded-full bg-current" />
-            <span className="w-[2px] h-[2px] rounded-full bg-current" />
+        )}
+
+        {isEditing ? (
+          <input
+            type="text"
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            onPointerDown={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSaveName();
+              } else if (e.key === 'Escape') {
+                setIsEditing(false);
+                setEditName(genre.name);
+              }
+            }}
+            onBlur={handleSaveName}
+            autoFocus
+            className="w-full bg-black/50 border border-white/20 rounded px-1.5 py-0.5 text-center text-xs text-white focus:outline-none focus:border-primary/60"
+          />
+        ) : (
+          <span className="truncate flex-1 text-center" style={{ pointerEvents: 'none' }}>
+            {genre.name}
           </span>
-          <span className="flex gap-[2px]">
-            <span className="w-[2px] h-[2px] rounded-full bg-current" />
-            <span className="w-[2px] h-[2px] rounded-full bg-current" />
-          </span>
-        </span>
-        <span className="truncate flex-1 text-center" style={{ pointerEvents: 'none' }}>{genre.name}</span>
-        <button
-          type="button"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => { e.stopPropagation(); onRemove(genre.id); }}
-          className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full hover:bg-black/20 transition-all cursor-pointer opacity-50 hover:opacity-100 shrink-0"
-          title={i18next.t('common.remove')}
-        >
-          <X className="w-2.5 h-2.5" />
-        </button>
+        )}
+
+        {!isEditing && onRename && (
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsEditing(true);
+            }}
+            className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full hover:bg-black/30 transition-all cursor-pointer opacity-0 group-hover:opacity-70 hover:!opacity-100 shrink-0"
+            title="Modifier le nom (ou Clic droit)"
+          >
+            <Edit2 className="w-2.5 h-2.5" />
+          </button>
+        )}
+
+        {!isEditing && (
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); onRemove(genre.id); }}
+            className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full hover:bg-black/20 transition-all cursor-pointer opacity-50 hover:opacity-100 shrink-0"
+            title={i18next.t('common.remove')}
+          >
+            <X className="w-2.5 h-2.5" />
+          </button>
+        )}
       </span>
     </span>
   );
@@ -590,10 +662,11 @@ const GenreSelector: React.FC<{
   selectedGenres: Genre[];
   onAdd: (genre: Genre) => void;
   onRemove: (genreId: number) => void;
+  onRename?: (genreId: number, newName: string) => Promise<void>;
   onReorder: (newOrder: Genre[]) => void;
   collectionId: number | null;
   collectionGenres: Genre[];
-}> = ({ selectedGenres, onAdd, onRemove, onReorder, collectionGenres }) => {
+}> = ({ selectedGenres, onAdd, onRemove, onRename, onReorder, collectionGenres }) => {
   const [input, setInput] = useState('');
   const [allGenres, setAllGenres] = useState<Genre[]>([]);
   const [isFocused, setIsFocused] = useState(false);
@@ -636,9 +709,10 @@ const GenreSelector: React.FC<{
 
   const handleCreate = async () => {
     if (!input.trim()) return;
+    const cleanName = toTitleCase(input.trim());
     try {
-      const id = await tauriApi.genres.create(input.trim());
-      const newGenre: Genre = { id, name: input.trim(), color: '#8B5CF6', created_at: new Date().toISOString() };
+      const id = await tauriApi.genres.create(cleanName);
+      const newGenre: Genre = { id, name: cleanName, color: '#8B5CF6', created_at: new Date().toISOString() };
       onAdd(newGenre);
       setInput('');
       setAllGenres((prev) => [...prev, newGenre]);
@@ -823,7 +897,7 @@ const GenreSelector: React.FC<{
                 <SortableContext items={primaryGenres.map((g) => g.id)} strategy={rectSortingStrategy}>
                   <DroppableContainer id="primary-container" className="grid grid-cols-3 gap-1.5 p-2 rounded-xl border border-white/5 bg-white/[0.01] min-h-[50px] transition-all">
                     {primaryGenres.map((genre) => (
-                      <SortableGenrePill key={genre.id} genre={genre} onRemove={onRemove} />
+                      <SortableGenrePill key={genre.id} genre={genre} onRemove={onRemove} onRename={onRename} />
                     ))}
                     {primaryGenres.length === 0 && (
                       <div className="col-span-3 flex items-center justify-center py-3 text-[10px] text-white/20 italic">
@@ -847,7 +921,7 @@ const GenreSelector: React.FC<{
                 <SortableContext items={secondaryGenres.map((g) => g.id)} strategy={rectSortingStrategy}>
                   <DroppableContainer id="secondary-container" className="grid grid-cols-3 gap-1.5 p-2 rounded-xl border border-white/5 bg-white/[0.01] min-h-[50px] transition-all">
                     {secondaryGenres.map((genre) => (
-                      <SortableGenrePill key={genre.id} genre={genre} onRemove={onRemove} />
+                      <SortableGenrePill key={genre.id} genre={genre} onRemove={onRemove} onRename={onRename} />
                     ))}
                     {secondaryGenres.length === 0 && (
                       <div className="col-span-3 flex items-center justify-center py-3 text-[10px] text-white/20 italic">
@@ -1571,6 +1645,9 @@ const MediaCreate: React.FC = () => {
   });
 
   const [showCoverCrop, setShowCoverCrop] = useState(false);
+  const [showApiSearch, setShowApiSearch] = useState(false);
+  // Pending API images to download after media is saved (needs media_id)
+  const [pendingApiImages, setPendingApiImages] = useState<string[]>([]);
   // Track which image index is used as cover source (independent of drag order)
   const [coverImageIndex, setCoverImageIndex] = useState(0);
   // In edit mode, store the existing cropped cover URL to display instead of full image
@@ -1836,6 +1913,13 @@ const MediaCreate: React.FC = () => {
   const creatorLabel = selectedCollection?.creator_label || 'Creator';
   const dateLabel = selectedCollection?.date_label || 'Experience date';
 
+  // API enrichment — providers enabled on the selected collection
+  const apiProviders = useMemo(
+    () => parseApiProviders(selectedCollection?.api_providers ?? null),
+    [selectedCollection],
+  );
+  const hasApiProviders = apiProviders.length > 0;
+
   const [creatorSuggestions, setCreatorSuggestions] = useState<string[]>([]);
   const [collectionGenres, setCollectionGenres] = useState<Genre[]>([]);
   const { data: people = [] } = usePeople();
@@ -1870,6 +1954,137 @@ const MediaCreate: React.FC = () => {
   const updateField = useCallback(<K extends keyof MediaFormState>(key: K, value: MediaFormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   }, []);
+
+  // Handle API enrichment pre-fill: populate form fields from API detail
+  const handleApiPreFill = useCallback(
+    async (detail: ApiMediaDetail) => {
+      // 1. Images
+      const apiGalleryImages: GalleryImage[] = detail.images
+        .slice(0, MAX_IMAGES_PER_MEDIA)
+        .map((img, idx) => ({
+          id: `api-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 7)}`,
+          file: null,
+          preview: img.url,
+          isExisting: false,
+          apiUrl: img.url,
+        }));
+
+      setPendingApiImages(apiGalleryImages.map((img) => img.apiUrl!));
+
+      // 2. Genres & Tags
+      let resolvedGenres: Genre[] = [];
+      if (detail.genres && detail.genres.length > 0) {
+        try {
+          const existingGenres = await tauriApi.genres.getAll();
+          const cleanNames: string[] = [];
+          for (const rawName of detail.genres) {
+            const formatted = toTitleCase(rawName);
+            if (formatted && !cleanNames.some((c) => c.toLowerCase() === formatted.toLowerCase())) {
+              cleanNames.push(formatted);
+            }
+          }
+
+          const genrePromises = cleanNames.slice(0, MAX_GENRES_PER_MEDIA).map(async (cleanName) => {
+            const match = existingGenres.find(
+              (eg) => eg.name.trim().toLowerCase() === cleanName.toLowerCase()
+            );
+            if (match) return match;
+            try {
+              const id = await tauriApi.genres.create(cleanName);
+              const newG: Genre = {
+                id,
+                name: cleanName,
+                color: '#8B5CF6',
+                created_at: new Date().toISOString(),
+              };
+              return newG;
+            } catch {
+              return null;
+            }
+          });
+          const results = await Promise.all(genrePromises);
+          resolvedGenres = results
+            .filter((g): g is Genre => g !== null)
+            .map((g, idx) => ({ ...g, position: idx }));
+        } catch (err) {
+          console.error('Failed to pre-fill genres:', err);
+        }
+      }
+
+      // 3. Credits / People
+      let resolvedCredits: MediaCredit[] = [];
+      if (detail.credits && detail.credits.length > 0) {
+        try {
+          const existingPeople = await tauriApi.people.getAll();
+          const creditPromises = detail.credits.slice(0, 10).map(async (c, idx) => {
+            const cleanName = c.name.trim();
+            if (!cleanName) return null;
+            const match = existingPeople.find(
+              (p) => p.name.trim().toLowerCase() === cleanName.toLowerCase()
+            );
+            let personId: number;
+            let photoPath: string | null = null;
+            if (match) {
+              personId = match.id;
+              photoPath = match.photo_path;
+            } else {
+              try {
+                personId = await tauriApi.people.create(cleanName);
+              } catch {
+                return null;
+              }
+            }
+            return {
+              person_id: personId,
+              name: cleanName,
+              photo_path: photoPath,
+              role: c.role || '',
+              position: idx,
+            } as MediaCredit;
+          });
+          const results = await Promise.all(creditPromises);
+          resolvedCredits = results.filter((c): c is MediaCredit => c !== null);
+          queryClient.invalidateQueries({ queryKey: ['people'] });
+        } catch (err) {
+          console.error('Failed to pre-fill credits:', err);
+        }
+      }
+
+      setForm((prev) => ({
+        ...prev,
+        title: detail.title || prev.title,
+        creator: detail.creator || prev.creator,
+        releaseDate: detail.release_date || prev.releaseDate,
+        mediaStatus: (detail.media_status as MediaFormState['mediaStatus']) || prev.mediaStatus,
+        synopsis: detail.synopsis || prev.synopsis,
+        progressTotal: detail.duration ?? prev.progressTotal,
+        images: apiGalleryImages.length > 0 ? apiGalleryImages : prev.images,
+        genres: resolvedGenres.length > 0 ? resolvedGenres : prev.genres,
+        credits: resolvedCredits.length > 0 ? resolvedCredits : prev.credits,
+      }));
+
+      setShowApiSearch(false);
+    },
+    [queryClient],
+  );
+
+  const handleRenameGenreInForm = useCallback(
+    async (genreId: number, newName: string) => {
+      const cleanName = toTitleCase(newName.trim());
+      if (!cleanName) return;
+      try {
+        await tauriApi.genres.updateName(genreId, cleanName);
+        setForm((prev) => ({
+          ...prev,
+          genres: prev.genres.map((g) => (g.id === genreId ? { ...g, name: cleanName } : g)),
+        }));
+        queryClient.invalidateQueries({ queryKey: ['genres'] });
+      } catch (err) {
+        console.error('Failed to rename genre:', err);
+      }
+    },
+    [queryClient],
+  );
 
   const handleStatusChange = (option: ProgressStatusOption) => {
     setForm((prev) => ({ ...prev, progressStatus: option.value }));
@@ -2469,6 +2684,24 @@ const MediaCreate: React.FC = () => {
         }
       }
 
+      // Download API enrichment images BEFORE generating cover so setCover can crop them
+      const apiImagesToDownload = form.images
+        .filter((img) => img.apiUrl)
+        .map((img) => img.apiUrl!);
+      const imagesToFetch = apiImagesToDownload.length > 0 ? apiImagesToDownload : pendingApiImages;
+
+      if (imagesToFetch.length > 0 && targetMediaId) {
+        for (const imgUrl of imagesToFetch) {
+          try {
+            await tauriApi.apiEnrichment.downloadImage(imgUrl, targetMediaId);
+          } catch (imgErr) {
+            console.error('Failed to download API image:', imgErr);
+          }
+        }
+        setPendingApiImages([]);
+        queryClient.invalidateQueries({ queryKey: ['media'] });
+      }
+
       // Generate cover if:
       // - explicit crop by user
       // - cover source changed (cover image changed)
@@ -2829,15 +3062,27 @@ const MediaCreate: React.FC = () => {
                   <div className="grid grid-cols-2 gap-3">
                     <div data-tutorial="media-title-input" className={titleLocked ? 'pointer-events-none opacity-60' : ''}>
                       <label className="block text-[11px] font-semibold text-white/40 uppercase tracking-wider mb-1.5">{t('common.title')} <span className="text-red-400">*</span></label>
-                      <input
-                        type="text"
-                        value={form.title}
-                        onChange={(e) => { updateField('title', e.target.value); setValidationErrors((prev) => prev.filter((x) => x !== 'title')); }}
-                        placeholder={t('mediaCreate.titlePlaceholder')}
-                        maxLength={MEDIA_TITLE_MAX}
-                        className={`w-full px-3 py-2.5 bg-white/5 border rounded-xl text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-primary/30 transition-colors ${validationErrors.includes('title') ? 'border-red-500/60 bg-red-500/5' : 'border-white/10'
-                          }`}
-                      />
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={form.title}
+                          onChange={(e) => { updateField('title', e.target.value); setValidationErrors((prev) => prev.filter((x) => x !== 'title')); }}
+                          placeholder={t('mediaCreate.titlePlaceholder')}
+                          maxLength={MEDIA_TITLE_MAX}
+                          className={`w-full px-3 py-2.5 bg-white/5 border rounded-xl text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-primary/30 transition-colors ${validationErrors.includes('title') ? 'border-red-500/60 bg-red-500/5' : 'border-white/10'
+                            } ${hasApiProviders ? 'pr-10' : ''}`}
+                        />
+                        {hasApiProviders && (
+                          <button
+                            type="button"
+                            onClick={() => setShowApiSearch(true)}
+                            title={t('mediaCreate.searchViaApi')}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-lg text-flashy-purple/60 hover:text-flashy-purple hover:bg-flashy-purple/10 transition-colors"
+                          >
+                            <Search className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                       {validationErrors.includes('title') && (
                         <p className="text-[10px] text-red-400 mt-1">{t('mediaCreate.titleRequired')}</p>
                       )}
@@ -3070,6 +3315,7 @@ const MediaCreate: React.FC = () => {
                   updateField('genres', [...form.genres, { ...genre, position }]);
                 }}
                 onRemove={(id) => updateField('genres', form.genres.filter((g) => g.id !== id))}
+                onRename={handleRenameGenreInForm}
                 onReorder={(newOrder) => updateField('genres', newOrder)}
                 collectionId={form.collectionId}
                 collectionGenres={collectionGenres}
@@ -3650,6 +3896,14 @@ const MediaCreate: React.FC = () => {
           onCancel={() => setShowCoverCrop(false)}
         />
       )}
+
+      {/* API enrichment search modal */}
+      <ApiSearchModal
+        open={showApiSearch}
+        onClose={() => setShowApiSearch(false)}
+        providers={apiProviders}
+        onSelect={handleApiPreFill}
+      />
 
       {/* Image processing toast */}
       <AnimatePresence>

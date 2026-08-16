@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, Palette, Bell, Keyboard, Database, Info, Settings as SettingsIcon } from 'lucide-react';
+import { User, Palette, Bell, Keyboard, Database, Info, Settings as SettingsIcon, Cloud } from 'lucide-react';
 import { AppShell, MainContent } from '@/components/Layout';
 import SharedHeader from '@/components/SharedHeader';
 import {
@@ -10,12 +10,13 @@ import {
   ShortcutsSection,
   DataSection,
   AboutSection,
+  ApiKeysSection,
 } from '@/components/Settings';
 
 /* ================================================================== */
 /*  Tabs                                                               */
 /* ================================================================== */
-type SettingsTab = 'profile' | 'personalization' | 'notifications' | 'shortcuts' | 'data' | 'about';
+type SettingsTab = 'profile' | 'personalization' | 'notifications' | 'shortcuts' | 'data' | 'api' | 'about';
 
 interface TabDef {
   id: SettingsTab;
@@ -33,6 +34,7 @@ const Settings: React.FC = () => {
     { id: 'notifications', label: t('settings.tabs.notifications'), icon: Bell },
     { id: 'shortcuts', label: t('settings.tabs.shortcuts'), icon: Keyboard },
     { id: 'data', label: t('settings.tabs.data'), icon: Database },
+    { id: 'api', label: t('settings.tabs.api'), icon: Cloud },
     { id: 'about', label: t('settings.tabs.about'), icon: Info },
   ];
 
@@ -43,6 +45,7 @@ const Settings: React.FC = () => {
       case 'notifications': return <NotificationsSection />;
       case 'shortcuts': return <ShortcutsSection />;
       case 'data': return <DataSection />;
+      case 'api': return <ApiKeysSection />;
       case 'about': return <AboutSection />;
     }
   };

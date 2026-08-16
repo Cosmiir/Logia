@@ -126,7 +126,19 @@
       "notifications": "Notifications",
       "shortcuts": "Shortcuts",
       "data": "Data",
+      "api": "API Keys",
       "about": "About"
+    },
+    "api": {
+      "title": "API Keys",
+      "description": "Configure API keys to enable online enrichment for your media. These are stored locally and never sent anywhere except the respective API providers.",
+      "offlineNotice": "Logia is offline by default. API enrichment is entirely optional — you can use the app without any keys.",
+      "getKey": "Get a key",
+      "keyPlaceholder": "Paste your API key here...",
+      "save": "Save",
+      "saved": "Saved!",
+      "attributionTitle": "Attribution",
+      "tmdbAttribution": "This product uses the TMDB API but is not endorsed or certified by TMDB. TMDB terms of service require this attribution notice for all applications using their API."
     },
     "notifications": {
       "alerts": "Alerts",
@@ -521,6 +533,7 @@
     "noCollection": "No collection",
     "titlePlaceholder": "Media name...",
     "titleRequired": "Title is required",
+    "searchViaApi": "Search via API",
     "synopsis": "Synopsis",
     "crop": "Crop",
     "firstImageIsCover": "First image = cover",
@@ -822,7 +835,32 @@
     },
     "preview": {
       "defaultName": "Collection name"
+    },
+    "apiEnrichment": {
+      "title": "API Enrichment",
+      "hint": "Optional",
+      "description": "Map this collection to external APIs to automatically pre-fill media details (title, creator, date, synopsis, images) when creating new entries.",
+      "noProviders": "No providers available. Configure API keys in Settings.",
+      "keyRequired": "Key required",
+      "keyConfigured": "Key set",
+      "selectedCount": "{{count}} provider(s) selected",
+      "types": {
+        "movie": "Films",
+        "series": "Series",
+        "anime": "Anime",
+        "manga": "Manga",
+        "game": "Video Games",
+        "music": "Music"
+      }
     }
+  },
+  "apiSearch": {
+    "title": "Search via API",
+    "placeholder": "Search for a title...",
+    "typeToSearch": "Type at least 2 characters to search",
+    "noResults": "No results found",
+    "searchingIn": "Searching across {{count}} provider(s)...",
+    "detailError": "Failed to fetch details"
   },
   "export": {
     "exportMode": "Export mode",

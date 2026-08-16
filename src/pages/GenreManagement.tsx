@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Tag, Trash2, Palette, Plus, Search, X } from 'lucide-react';
+import { ArrowLeft, Tag, Trash2, Palette, Plus, Search, X, Edit2 } from 'lucide-react';
 import { AppShell, MainContent } from '@/components/Layout';
 import SharedHeader from '@/components/SharedHeader';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -16,6 +16,8 @@ const GenreManagement: React.FC = () => {
   const [genres, setGenres] = useState<Genre[]>([]);
   const [search, setSearch] = useState('');
   const [editingColorId, setEditingColorId] = useState<number | null>(null);
+  const [editingNameId, setEditingNameId] = useState<number | null>(null);
+  const [editingNameValue, setEditingNameValue] = useState('');
   const [newGenreName, setNewGenreName] = useState('');
   const [genreToDelete, setGenreToDelete] = useState<number | null>(null);
   const colorPickerRef = useRef<HTMLDivElement>(null);
@@ -103,6 +105,22 @@ const GenreManagement: React.FC = () => {
       setGenres((prev) => prev.map((g) => g.id === genreId ? { ...g, color } : g));
     } catch (err) {
       console.error('Failed to update color:', err);
+    }
+  };
+
+  const handleRenameGenre = async (genreId: number) => {
+    const trimmed = editingNameValue.trim();
+    if (!trimmed) {
+      setEditingNameId(null);
+      return;
+    }
+    try {
+      await tauriApi.genres.updateName(genreId, trimmed);
+      setGenres((prev) => prev.map((g) => g.id === genreId ? { ...g, name: trimmed } : g));
+    } catch (err) {
+      console.error('Failed to update genre name:', err);
+    } finally {
+      setEditingNameId(null);
     }
   };
 
@@ -300,17 +318,51 @@ const GenreManagement: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Genre name pill */}
-                    <span
-                      className="inline-flex items-center justify-center px-3 py-1.5 rounded-full text-xs font-medium flex-1 select-none"
-                      style={{ backgroundColor: `${genre.color}20`, border: `1px solid ${genre.color}50`, color: `color-mix(in srgb, ${genre.color} 75%, white)` }}
-                    >
-                      {genre.name}
-                    </span>
+                    {/* Genre name pill / inline edit */}
+                    {editingNameId === genre.id ? (
+                      <input
+                        type="text"
+                        value={editingNameValue}
+                        onChange={(e) => setEditingNameValue(e.target.value)}
+                        onBlur={() => handleRenameGenre(genre.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleRenameGenre(genre.id);
+                          if (e.key === 'Escape') setEditingNameId(null);
+                        }}
+                        autoFocus
+                        className="px-2 py-1 bg-white/10 border border-primary/50 rounded-lg text-xs font-medium text-white focus:outline-none flex-1 min-w-0"
+                      />
+                    ) : (
+                      <span
+                        onDoubleClick={() => {
+                          if (!isSelectionMode) {
+                            setEditingNameId(genre.id);
+                            setEditingNameValue(genre.name);
+                          }
+                        }}
+                        className="inline-flex items-center justify-center px-3 py-1.5 rounded-full text-xs font-medium flex-1 select-none truncate cursor-pointer hover:opacity-90 transition-opacity"
+                        style={{ backgroundColor: `${genre.color}20`, border: `1px solid ${genre.color}50`, color: `color-mix(in srgb, ${genre.color} 75%, white)` }}
+                        title="Double-cliquer pour modifier le nom"
+                      >
+                        {genre.name}
+                      </span>
+                    )}
 
                     {/* Actions */}
                     {!isSelectionMode && (
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingNameId(genre.id);
+                            setEditingNameValue(genre.name);
+                          }}
+                          className="w-8 h-8 flex items-center justify-center rounded-lg text-white/30 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+                          title="Modifier le nom"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
                         <button
                           type="button"
                           onClick={(e) => {

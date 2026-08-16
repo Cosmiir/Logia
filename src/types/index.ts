@@ -17,6 +17,7 @@ export interface Collection {
   monthly_capacity: number | null;
   position: number;
   created_at: string;
+  api_providers: string | null;
 }
 
 export interface ExperienceEntry {
@@ -188,6 +189,7 @@ export interface CreateCollectionDto {
   plural_with_s?: boolean;
   consumption_verb?: string;
   monthly_capacity?: number;
+  api_providers?: string;
 }
 
 export interface UpdateCollectionDto {
@@ -205,6 +207,7 @@ export interface UpdateCollectionDto {
   plural_with_s?: boolean;
   consumption_verb?: string;
   monthly_capacity?: number;
+  api_providers?: string;
 }
 
 export interface CreateMediaDto {
@@ -412,4 +415,50 @@ export interface MediaAttachment {
   size_bytes: number;
   position: number;
   created_at: string;
+}
+
+// API Enrichment types
+
+export interface ProviderInfo {
+  id: string;
+  label: string;
+  media_type: string;
+  needs_key: boolean;
+  key_setting: string | null;
+  available: boolean;
+  doc_url: string;
+}
+
+export interface ApiSearchResult {
+  provider: string;
+  provider_id: string;
+  title: string;
+  year: string | null;
+  creator: string | null;
+  thumbnail_b64: string | null;
+}
+
+export interface ApiImage {
+  url: string;
+  thumbnail_b64: string | null;
+}
+
+export interface ApiCredit {
+  name: string;
+  role: string | null;
+  photo_url?: string | null;
+}
+
+export interface ApiMediaDetail {
+  provider: string;
+  provider_id: string;
+  title: string;
+  release_date: string | null;
+  creator: string | null;
+  media_status: string | null;
+  synopsis: string | null;
+  duration: number | null;
+  genres: string[];
+  credits: ApiCredit[];
+  images: ApiImage[];
 }

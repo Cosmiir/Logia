@@ -2,6 +2,7 @@ mod models;
 mod db;
 mod commands;
 mod utils;
+mod api;
 
 use std::sync::Mutex;
 use std::path::PathBuf;
@@ -36,6 +37,7 @@ pub struct AppState {
     pub storage_dir: Mutex<PathBuf>,
     pub storage_missing: Mutex<bool>,
     pub _db_lock: Mutex<Option<DbLock>>,
+    pub rate_limiter: Mutex<api::rate_limiter::RateLimiter>,
 }
 
 /// RAII guard for the database lock file. Releases the Windows file lock when dropped.
@@ -187,6 +189,7 @@ pub fn run() {
                 storage_dir: Mutex::new(storage_dir),
                 storage_missing: Mutex::new(storage_missing),
                 _db_lock: Mutex::new(db_lock),
+                rate_limiter: Mutex::new(api::rate_limiter::RateLimiter::new()),
             });
             
             Ok(())
@@ -230,6 +233,7 @@ pub fn run() {
             commands::genres::create_genre,
             commands::genres::get_all_genres,
             commands::genres::update_genre_color,
+            commands::genres::update_genre_name,
             commands::genres::delete_genre,
             commands::people::get_all_people,
             commands::people::search_people,
@@ -286,6 +290,10 @@ pub fn run() {
             commands::review_templates::create_review_template,
             commands::review_templates::update_review_template,
             commands::review_templates::delete_review_template,
+            commands::api::get_api_providers,
+            commands::api::search_api_media,
+            commands::api::get_api_media_detail,
+            commands::api::download_api_image_to_media,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

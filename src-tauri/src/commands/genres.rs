@@ -33,6 +33,17 @@ pub async fn update_genre_color(
 }
 
 #[tauri::command]
+pub async fn update_genre_name(
+    state: State<'_, AppState>,
+    genre_id: i64,
+    name: String,
+) -> Result<(), String> {
+    utils::validate_genre_name(&name)?;
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    db::genres::update_name(&conn, genre_id, &name).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn get_all_genres(state: State<'_, AppState>) -> Result<Vec<Genre>, String> {
     let conn = state.db.lock().map_err(|e| e.to_string())?;
     db::genres::get_all(&conn).map_err(|e| e.to_string())

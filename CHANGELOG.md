@@ -5,6 +5,29 @@ All notable changes to Logia will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.8] - 2026-08-17
+
+### Added
+- **Optional API enrichment**: Logia is now offline-by-default with optional per-collection API enrichment. Users can map collections to external API providers to automatically pre-fill media details (title, creator, release date, status, synopsis, credits, and up to 8 gallery images) when creating or editing media entries. The feature is entirely optional — the app works fully offline without any API keys or provider configuration.
+  - **9 API providers** across 6 media types:
+    - **Films**: TMDB (key required) + OMDb (key required)
+    - **Series**: TMDB (key required) + TVMaze (no key)
+    - **Anime**: Jikan/MyAnimeList (no key) + AniList (no key)
+    - **Manga**: Jikan/MyAnimeList (no key) + AniList (no key)
+    - **Video Games**: RAWG (key required) + TheGamesDB (key required)
+    - **Music**: MusicBrainz (no key) + iTunes (no key)
+  - **Rust backend** (`src-tauri/src/api/`): All API calls are handled server-side using `reqwest` with `rustls` — no CSP modifications needed, API keys never exposed to the frontend, and images can be downloaded directly to local storage. Includes a per-provider **rate limiter** (token bucket) with 429 retry + exponential backoff (1s, 2s, 4s), respecting each provider's individual rate limits (e.g. Jikan 3 req/s, MusicBrainz 1 req/s). MusicBrainz User-Agent is dynamically set to `Logia/{CARGO_PKG_VERSION}` per their API policy. Provider modules parse responses flexibly with `serde_json::Value` for graceful handling of missing fields.
+  - **4 new Tauri commands**: `get_api_providers` (list providers with key-availability status), `search_api_media` (parallel multi-provider search), `get_api_media_detail` (fetch full detail for a single result), `download_api_image_to_media` (download an image from a URL and save it to a media's gallery, reusing the existing WebP/EXIF/resize pipeline via the extracted `save_image_bytes_to_media` helper).
+  - **CollectionEdit**: New "API Enrichment" section with a multi-select of providers grouped by media type (Films, Series, Anime, Manga, Video Games, Music). Providers requiring an API key are grayed out with a "Key required" badge until the key is configured in Settings. Providers with a configured key show a "Key set" badge.
+  - **Settings → API Keys**: New tab for configuring API keys (TMDB, OMDb, RAWG, TheGamesDB) with save buttons and per-key status feedback. Includes the mandatory TMDB attribution notice required by their terms of service. An offline notice reminds users that enrichment is optional.
+  - **ApiSearchModal**: Debounced search modal (500ms) triggered by a search icon next to the title field in MediaCreate/MediaEdit (only shown when the selected collection has providers enabled). Results display thumbnails (base64-encoded from Rust), title, year, creator, and a source badge per provider. Selecting a result fetches the full detail and pre-fills the form fields; up to 8 images are downloaded and added to the gallery automatically after the media is saved. Users retain full control to edit all pre-filled fields.
+  - **DB migration**: Added `api_providers` TEXT column (JSON array of provider IDs) to the `collections` table. Migration is automatic on app launch.
+  - **i18n**: Full English and French translations for all new UI strings (`settings.api.*`, `collectionEdit.apiEnrichment.*`, `apiSearch.*`, `mediaCreate.searchViaApi`).
+
+### Changed
+- **README**: Updated from "100% offline, no external API" to "offline by default, with optional API enrichment" to reflect the new feature while reassuring users that the app remains fully functional without any internet connection.
+- **Image pipeline refactor**: Extracted `save_image_bytes_to_media` from `upload_media_image` in `commands/media.rs` to share the core image processing logic (EXIF rotation, resize to max 1920px, WebP encode at quality 80) between the existing base64 upload path and the new API image download path. The function takes a `&Connection` and `&Path` directly instead of `State<'_, AppState>`, making it reusable from non-command contexts.
+
 ## [1.0.7] - 2026-08-15
 
 ### Fixed

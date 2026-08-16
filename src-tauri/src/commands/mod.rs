@@ -9,3 +9,4 @@ pub mod notifications;
 pub mod settings;
 pub mod review_templates;
 pub mod people;
+pub mod api;

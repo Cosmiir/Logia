@@ -18,6 +18,7 @@ pub struct Collection {
     pub monthly_capacity: Option<i32>,
     pub position: i32,
     pub created_at: String,
+    pub api_providers: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -35,6 +36,7 @@ pub struct CreateCollectionDto {
     pub plural_with_s: Option<bool>,
     pub consumption_verb: Option<String>,
     pub monthly_capacity: Option<i32>,
+    pub api_providers: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -53,4 +55,5 @@ pub struct UpdateCollectionDto {
     pub plural_with_s: Option<bool>,
     pub consumption_verb: Option<String>,
     pub monthly_capacity: Option<i32>,
+    pub api_providers: Option<String>,
 }

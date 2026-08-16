@@ -126,7 +126,19 @@
       "notifications": "Notifications",
       "shortcuts": "Raccourcis",
       "data": "Données",
+      "api": "Clés API",
       "about": "À propos"
+    },
+    "api": {
+      "title": "Clés API",
+      "description": "Configurez les clés API pour activer l'enrichissement en ligne de vos médias. Elles sont stockées localement et jamais envoyées ailleurs que vers les fournisseurs d'API respectifs.",
+      "offlineNotice": "Logia est hors-ligne par défaut. L'enrichissement par API est entièrement optionnel — vous pouvez utiliser l'application sans aucune clé.",
+      "getKey": "Obtenir une clé",
+      "keyPlaceholder": "Collez votre clé API ici...",
+      "save": "Enregistrer",
+      "saved": "Enregistré !",
+      "attributionTitle": "Attribution",
+      "tmdbAttribution": "Ce produit utilise l'API TMDB mais n'est ni approuvé ni certifié par TMDB. Les conditions d'utilisation de TMDB exigent cette notice d'attribution pour toutes les applications utilisant leur API."
     },
     "notifications": {
       "alerts": "Alertes",
@@ -521,6 +533,7 @@
     "noCollection": "Aucune collection",
     "titlePlaceholder": "Nom du média...",
     "titleRequired": "Le titre est requis",
+    "searchViaApi": "Rechercher via API",
     "synopsis": "Synopsis",
     "crop": "Recadrer",
     "firstImageIsCover": "Première image = couverture",
@@ -822,7 +835,32 @@
     },
     "preview": {
       "defaultName": "Nom de la collection"
+    },
+    "apiEnrichment": {
+      "title": "Enrichissement API",
+      "hint": "Optionnel",
+      "description": "Associez cette collection à des API externes pour pré-remplir automatiquement les détails des médias (titre, créateur, date, synopsis, images) lors de la création de nouvelles entrées.",
+      "noProviders": "Aucun fournisseur disponible. Configurez les clés API dans les Paramètres.",
+      "keyRequired": "Clé requise",
+      "keyConfigured": "Clé configurée",
+      "selectedCount": "{{count}} fournisseur(s) sélectionné(s)",
+      "types": {
+        "movie": "Films",
+        "series": "Séries",
+        "anime": "Anime",
+        "manga": "Manga",
+        "game": "Jeux Vidéo",
+        "music": "Musique"
+      }
     }
+  },
+  "apiSearch": {
+    "title": "Rechercher via API",
+    "placeholder": "Rechercher un titre...",
+    "typeToSearch": "Tapez au moins 2 caractères pour rechercher",
+    "noResults": "Aucun résultat trouvé",
+    "searchingIn": "Recherche sur {{count}} fournisseur(s)...",
+    "detailError": "Échec de la récupération des détails"
   },
   "export": {
     "exportMode": "Mode d'export",

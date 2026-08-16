@@ -17,6 +17,8 @@ import {
   Save,
   MessageSquare,
   Target,
+  Cloud,
+  KeyRound,
 } from 'lucide-react';
 import { AppShell, MainContent } from '@/components/Layout';
 import SharedHeader from '@/components/SharedHeader';
@@ -37,6 +39,13 @@ import {
   getIconById,
 } from '@/lib/collection-icons';
 import { getCollectionIconComponent } from '@/components/CollectionIcons';
+import { useApiProviders } from '@/hooks/useApiEnrichment';
+import {
+  getProvidersByType,
+  mergeProviderInfo,
+  parseApiProviders,
+  serializeApiProviders,
+} from '@/lib/api-providers';
 import type { LucideIcon } from 'lucide-react';
 
 /* ================================================================== */
@@ -94,12 +103,14 @@ const CollectionEdit: React.FC = () => {
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [editFormLoaded, setEditFormLoaded] = useState(false);
+  const [apiProviders, setApiProviders] = useState<string[]>([]);
+  const { data: providerInfos } = useApiProviders();
 
   // Dirty tracking
   const formDirtyRef = useRef(false);
   const initialSnapshotRef = useRef<string | null>(null);
 
-  const serializeForm = useCallback(() => JSON.stringify({ name, iconId, color, creatorLabel, dateLabel, progressionLabel, progressionShortLabel, replayDateLabel, durationLabel, pluralWithS, consumptionVerb, monthlyCapacity }), [name, iconId, color, creatorLabel, dateLabel, progressionLabel, progressionShortLabel, replayDateLabel, durationLabel, pluralWithS, consumptionVerb, monthlyCapacity]);
+  const serializeForm = useCallback(() => JSON.stringify({ name, iconId, color, creatorLabel, dateLabel, progressionLabel, progressionShortLabel, replayDateLabel, durationLabel, pluralWithS, consumptionVerb, monthlyCapacity, apiProviders }), [name, iconId, color, creatorLabel, dateLabel, progressionLabel, progressionShortLabel, replayDateLabel, durationLabel, pluralWithS, consumptionVerb, monthlyCapacity, apiProviders]);
 
   // Fill form when editing an existing collection
   useEffect(() => {
@@ -116,6 +127,7 @@ const CollectionEdit: React.FC = () => {
       setPluralWithS(existing.plural_with_s ?? false);
       setConsumptionVerb(existing.consumption_verb || '');
       setMonthlyCapacity(existing.monthly_capacity ? String(existing.monthly_capacity) : '');
+      setApiProviders(parseApiProviders(existing.api_providers));
       setEditFormLoaded(true);
     }
   }, [existing, editFormLoaded]);
@@ -178,6 +190,7 @@ const CollectionEdit: React.FC = () => {
           plural_with_s: pluralWithS,
           consumption_verb: consumptionVerb.trim() || undefined,
           monthly_capacity: monthlyCapacity.trim() ? Number(monthlyCapacity) : undefined,
+          api_providers: serializeApiProviders(apiProviders),
         });
       } else {
         const finalProgressionLabel = progressionLabel.trim() || t('collectionEdit.defaults.episode');
@@ -194,6 +207,7 @@ const CollectionEdit: React.FC = () => {
           plural_with_s: pluralWithS,
           consumption_verb: consumptionVerb.trim() || undefined,
           monthly_capacity: monthlyCapacity.trim() ? Number(monthlyCapacity) : undefined,
+          api_providers: serializeApiProviders(apiProviders),
         });
       }
 
@@ -572,6 +586,120 @@ const CollectionEdit: React.FC = () => {
                   );
                 })}
               </div>
+            </div>
+
+            {/* API Enrichment Mapping */}
+            <div className="glass-card rounded-2xl p-6">
+              <SectionLabel
+                icon={Cloud}
+                label={t('collectionEdit.apiEnrichment.title')}
+                hint={t('collectionEdit.apiEnrichment.hint')}
+              />
+              <p className="text-[11px] text-text-secondary mb-4">
+                {t('collectionEdit.apiEnrichment.description')}
+              </p>
+              {(() => {
+                const grouped = providerInfos
+                  ? mergeProviderInfo(providerInfos)
+                  : Object.fromEntries(
+                      Object.entries(getProvidersByType()).map(([k, v]) => [
+                        k,
+                        v.map((p) => ({ ...p, available: false })),
+                      ]),
+                    );
+                const mediaTypes = Object.keys(grouped);
+                if (mediaTypes.length === 0) {
+                  return (
+                    <p className="text-[11px] text-text-secondary text-center py-3">
+                      {t('collectionEdit.apiEnrichment.noProviders')}
+                    </p>
+                  );
+                }
+                return (
+                  <div className="space-y-4">
+                    {mediaTypes.map((mt) => {
+                      const providers = grouped[mt];
+                      return (
+                        <div key={mt}>
+                          <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2">
+                            {t(`collectionEdit.apiEnrichment.types.${mt}`)}
+                          </p>
+                          <div className="space-y-1.5">
+                            {providers.map((p) => {
+                              // Use a unique key combining id + mediaType for the UI,
+                              // but store only the provider id in the collection.
+                              const uniqueKey = `${p.id}__${p.mediaType}`;
+                              const isSelected = apiProviders.some(
+                                (stored) => stored === p.id || stored === uniqueKey,
+                              );
+                              const isDisabled = p.needsKey && !p.available;
+                              return (
+                                <button
+                                  key={uniqueKey}
+                                  type="button"
+                                  disabled={isDisabled}
+                                  onClick={() => {
+                                    setApiProviders((prev) => {
+                                      const has = prev.some(
+                                        (s) => s === p.id || s === uniqueKey,
+                                      );
+                                      if (has) {
+                                        return prev.filter(
+                                          (s) => s !== p.id && s !== uniqueKey,
+                                        );
+                                      }
+                                      return [...prev, p.id];
+                                    });
+                                  }}
+                                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-left transition-all ${
+                                    isDisabled
+                                      ? 'border-white/5 bg-white/[0.02] opacity-50 cursor-not-allowed'
+                                      : isSelected
+                                        ? 'border-primary/40 bg-primary/10 cursor-pointer'
+                                        : 'border-white/10 bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/15 cursor-pointer'
+                                  }`}
+                                >
+                                  <div
+                                    className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                                      isSelected ? 'bg-primary border-primary' : 'border-white/20'
+                                    }`}
+                                  >
+                                    {isSelected && <Check className="w-3 h-3 text-white" />}
+                                  </div>
+                                  <span className={`text-sm font-medium flex-1 truncate ${isSelected ? 'text-white' : 'text-white/60'}`}>
+                                    {p.label}
+                                  </span>
+                                  {p.needsKey && (
+                                    <span
+                                      className="flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-full shrink-0"
+                                      style={{
+                                        color: p.available ? '#22c55e' : '#f59e0b',
+                                        backgroundColor: p.available ? '#22c55e15' : '#f59e0b15',
+                                      }}
+                                    >
+                                      <KeyRound className="w-2.5 h-2.5" />
+                                      {p.available
+                                        ? t('collectionEdit.apiEnrichment.keyConfigured')
+                                        : t('collectionEdit.apiEnrichment.keyRequired')}
+                                    </span>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+              {apiProviders.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-white/5">
+                  <p className="text-[10px] text-text-secondary">
+                    {t('collectionEdit.apiEnrichment.selectedCount', { count: apiProviders.length })}
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="h-8" />

@@ -180,12 +180,23 @@ export function formatProgression(
   const parts = strValue.split('.');
   if (parts.length === 2 && parts[1].length > 0) {
     const integerPart = parts[0];
-    const decimalPart = parts[1];
+    const decimalPart = parts[1].length === 1 ? parts[1] + '0' : parts[1];
     return displayUnit 
       ? `${integerPart} ${displayUnit} ${decimalPart}`
       : strValue;
   }
 
   return displayUnit ? `${value} ${displayUnit}` : strValue;
+}
+
+/**
+ * Convert string to Title Case (e.g. "dark comedy" -> "Dark Comedy", "sci-fi" -> "Sci-Fi").
+ */
+export function toTitleCase(str: string): string {
+  if (!str) return '';
+  return str
+    .trim()
+    .toLowerCase()
+    .replace(/(?:^|[\s\-\/])\S/g, (match) => match.toUpperCase());
 }
 

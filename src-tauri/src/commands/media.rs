@@ -907,6 +907,66 @@ pub fn encode_webp(img: &image::DynamicImage, quality: f32) -> Result<Vec<u8>, S
 
 /// Upload an image for a media item. Accepts base64-encoded image data.
 /// Processes the image (creates full WebP), saves to disk, inserts into DB.
+/// Core image-saving logic shared by `upload_media_image` (base64 from frontend)
+/// and `download_api_image_to_media` (downloaded from API). Takes the raw image
+/// bytes, processes them (EXIF rotation, resize, WebP encode), saves to disk,
+/// and inserts into the DB.
+pub fn save_image_bytes_to_media(
+    conn: &rusqlite::Connection,
+    storage_dir: &std::path::Path,
+    media_id: i64,
+    raw_bytes: &[u8],
+    file_name: &str,
+    position: i32,
+) -> Result<i64, String> {
+    use image::imageops::FilterType;
+
+    let manifest = db::profiles::load_manifest(storage_dir);
+    let profile_id = &manifest.active_profile_id;
+    let media_dir = db::profiles::profile_media_dir(storage_dir, profile_id);
+
+    let media_images_dir = media_dir.join(format!("media_{}", media_id));
+    std::fs::create_dir_all(&media_images_dir).map_err(|e| e.to_string())?;
+
+    let mut img = image::load_from_memory(raw_bytes)
+        .map_err(|e| format!("Failed to decode image: {}", e))?;
+
+    if let Some(rotation) = get_exif_orientation_from_bytes(raw_bytes) {
+        img = apply_exif_rotation(img, rotation);
+    }
+
+    let stem = std::path::Path::new(file_name)
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("image");
+    let full_name = unique_image_filename(stem);
+    let full_path = media_images_dir.join(&full_name);
+
+    let full_img = {
+        let max_dim = 1920u32;
+        if img.width() > max_dim || img.height() > max_dim {
+            img.resize(max_dim, max_dim, FilterType::Lanczos3)
+        } else {
+            img.clone()
+        }
+    };
+
+    let full_webp = encode_webp(&full_img, 80.0)?;
+    std::fs::write(&full_path, &full_webp).map_err(|e| e.to_string())?;
+
+    let relative_path = full_path
+        .strip_prefix(storage_dir)
+        .ok()
+        .and_then(|p| p.to_str())
+        .map(|s| s.replace('\\', "/"))
+        .unwrap_or_else(|| "".to_string());
+
+    let image_id = db::media::insert_image(conn, media_id, &relative_path, &relative_path, position)
+        .map_err(|e| e.to_string())?;
+
+    Ok(image_id)
+}
+
 /// Full image: max 1920px on longest side, WebP quality 80.
 /// No per-image thumbnail is generated — only a single cover.webp is created
 /// via set_media_cover when the user crops the cover.

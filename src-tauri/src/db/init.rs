@@ -305,5 +305,17 @@ fn migrate_schema(conn: &Connection) -> Result<()> {
         )?;
     }
 
+    // Add api_providers column to collections (JSON array of provider IDs, nullable)
+    let has_api_providers: bool = conn.query_row(
+        "SELECT COUNT(*) > 0 FROM pragma_table_info('collections') WHERE name='api_providers'",
+        [],
+        |row| row.get(0),
+    )?;
+    if !has_api_providers {
+        conn.execute_batch(
+            "ALTER TABLE collections ADD COLUMN api_providers TEXT;"
+        )?;
+    }
+
     Ok(())
 }

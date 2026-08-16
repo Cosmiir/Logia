@@ -10,6 +10,7 @@ pub mod review_templates;
 pub mod people;
 pub mod experience_entries;
 pub mod backup;
+pub mod settings;
 
 pub use init::initialize_database;
 
