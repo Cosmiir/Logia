@@ -9,6 +9,7 @@
 
 use crate::api::rate_limiter::RateLimiter;
 use crate::api::types::{ApiImage, ApiMediaDetail, ApiSearchResult};
+use futures::future::join_all;
 use serde_json::Value;
 use super::{build_client, fetch_image_as_b64, retry};
 
@@ -129,7 +130,7 @@ pub async fn search_anime(
         None => return Ok(vec![]),
     };
 
-    let mut results = Vec::new();
+    let mut items = Vec::new();
     for item in data.iter().take(MAX_RESULTS) {
         let provider_id = item
             .get("mal_id")
@@ -157,22 +158,35 @@ pub async fn search_anime(
             .get("images")
             .and_then(|i| i.get("jpg"))
             .and_then(|j| j.get("medium_image_url"))
-            .and_then(|u| u.as_str());
-        let thumbnail_b64 = if let Some(u) = thumb_url {
-            fetch_image_as_b64(u).await
-        } else {
-            None
-        };
+            .and_then(|u| u.as_str())
+            .map(|s| s.to_string());
 
-        results.push(ApiSearchResult {
+        items.push((provider_id, title, year, creator, thumb_url));
+    }
+
+    // Fetch all thumbnails concurrently rather than awaiting them one at a
+    // time — with up to MAX_RESULTS items this used to serialize several
+    // separate HTTP round-trips onto the search latency.
+    let thumbnails = join_all(items.iter().map(|(_, _, _, _, thumb_url)| async move {
+        match thumb_url {
+            Some(u) => fetch_image_as_b64(u).await,
+            None => None,
+        }
+    }))
+    .await;
+
+    let results = items
+        .into_iter()
+        .zip(thumbnails)
+        .map(|((provider_id, title, year, creator, _), thumbnail_b64)| ApiSearchResult {
             provider: "jikan_anime".to_string(),
             provider_id,
             title,
             year,
             creator,
             thumbnail_b64,
-        });
-    }
+        })
+        .collect();
 
     Ok(results)
 }
@@ -210,7 +224,7 @@ pub async fn search_manga(
         None => return Ok(vec![]),
     };
 
-    let mut results = Vec::new();
+    let mut items = Vec::new();
     for item in data.iter().take(MAX_RESULTS) {
         let provider_id = item
             .get("mal_id")
@@ -238,22 +252,32 @@ pub async fn search_manga(
             .get("images")
             .and_then(|i| i.get("jpg"))
             .and_then(|j| j.get("medium_image_url"))
-            .and_then(|u| u.as_str());
-        let thumbnail_b64 = if let Some(u) = thumb_url {
-            fetch_image_as_b64(u).await
-        } else {
-            None
-        };
+            .and_then(|u| u.as_str())
+            .map(|s| s.to_string());
 
-        results.push(ApiSearchResult {
+        items.push((provider_id, title, year, creator, thumb_url));
+    }
+
+    let thumbnails = join_all(items.iter().map(|(_, _, _, _, thumb_url)| async move {
+        match thumb_url {
+            Some(u) => fetch_image_as_b64(u).await,
+            None => None,
+        }
+    }))
+    .await;
+
+    let results = items
+        .into_iter()
+        .zip(thumbnails)
+        .map(|((provider_id, title, year, creator, _), thumbnail_b64)| ApiSearchResult {
             provider: "jikan_manga".to_string(),
             provider_id,
             title,
             year,
             creator,
             thumbnail_b64,
-        });
-    }
+        })
+        .collect();
 
     Ok(results)
 }

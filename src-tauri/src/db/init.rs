@@ -317,5 +317,33 @@ fn migrate_schema(conn: &Connection) -> Result<()> {
         )?;
     }
 
+    // Migrate legacy "thegamesdb" provider in collections.api_providers to "igdb"
+    let collections_to_migrate: Vec<(i64, String)> = {
+        let mut stmt = conn.prepare("SELECT id, api_providers FROM collections WHERE api_providers LIKE '%thegamesdb%'")?;
+        let rows = stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?;
+        rows.filter_map(|r| r.ok()).collect()
+    };
+
+    for (id, raw_json) in collections_to_migrate {
+        if let Ok(providers) = serde_json::from_str::<Vec<String>>(&raw_json) {
+            let mut new_providers = Vec::new();
+            for p in providers {
+                let mapped = if p == "thegamesdb" { "igdb" } else { p.as_str() };
+                if !new_providers.contains(&mapped.to_string()) {
+                    new_providers.push(mapped.to_string());
+                }
+            }
+            if let Ok(updated_json) = serde_json::to_string(&new_providers) {
+                let _ = conn.execute(
+                    "UPDATE collections SET api_providers = ?1 WHERE id = ?2",
+                    rusqlite::params![updated_json, id],
+                );
+            }
+        }
+    }
+
+    // Clean up deprecated setting key if present
+    let _ = conn.execute("DELETE FROM settings WHERE key = 'api_key_thegamesdb'", [])?;
+
     Ok(())
 }

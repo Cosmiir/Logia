@@ -1,6 +1,6 @@
 [package]
 name = "Logia"
-version = "1.0.8"
+version = "1.0.9"
 description = "Logia - Track your media progression and organize your collections"
 authors = ["Cosmiir"]
 edition = "2021"

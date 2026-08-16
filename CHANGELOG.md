@@ -5,6 +5,22 @@ All notable changes to Logia will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.9] - 2026-08-17
+
+### Added
+- **IGDB Video Games Integration**: Replaced TheGamesDB with **IGDB** (Internet Game Database via Twitch Developer API) for video game media search and enrichment.
+  - Supports Twitch OAuth2 `client_credentials` authentication with automatic in-memory token acquisition and caching.
+  - Queries high-res cover artwork (`t_cover_big`), search thumbnails (`t_thumb`), 720p screenshots and artworks (`t_720p`).
+  - Extracts exact game developer name via `involved_companies` (`developer == true`), genres, and estimated play duration (`time_to_beat.normally` in hours).
+  - Updated **Settings → API Keys** with dual inputs for **IGDB (Client ID)** (`api_key_igdb_client_id`) and **IGDB (Client Secret)** (`api_key_igdb_client_secret`), linking directly to Twitch Developer Console (`https://dev.twitch.tv/console`).
+
+### Removed
+- **TheGamesDB Provider**: Removed TheGamesDB integration in favor of IGDB for improved video game metadata, cover art quality, search speed, and developer resolution.
+
+### Fixed
+- **Production Build API Image Previews (CSP)**: Added `https:` and `http:` protocols to the `img-src` Content Security Policy directive in `src-tauri/tauri.conf.json`. Previously, external API image URLs (from TMDB, RAWG, IGDB, etc.) pre-filled during media creation/editing were blocked by the production webview's CSP prior to saving, displaying missing file icons in gallery preview slots until saved to local disk.
+- **CDN Referrer Policy**: Added `<meta name="referrer" content="no-referrer" />` to `index.html` to ensure external CDN image hosts accept webview image requests without blocking custom Tauri scheme origins.
+
 ## [1.0.8] - 2026-08-17
 
 ### Added

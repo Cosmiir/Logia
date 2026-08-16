@@ -1,6 +1,7 @@
 use crate::api::types::{ApiCredit, ApiImage, ApiMediaDetail, ApiSearchResult};
 use crate::api::rate_limiter::RateLimiter;
 use crate::api::providers::{build_client, fetch_image_as_b64, retry};
+use futures::future::join_all;
 
 const BASE_URL: &str = "https://api.themoviedb.org/3";
 const IMG_BASE: &str = "https://image.tmdb.org/t/p";
@@ -47,7 +48,7 @@ pub async fn search(
     let body: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
     let results = body.get("results").and_then(|v| v.as_array()).cloned().unwrap_or_default();
 
-    let mut out = Vec::new();
+    let mut items = Vec::new();
     for item in results.iter().take(5) {
         let media_type = item.get("media_type").and_then(|v| v.as_str()).unwrap_or("");
         if media_type != "movie" && media_type != "tv" {
@@ -73,24 +74,36 @@ pub async fn search(
             .get("original_name")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
-        let thumb = item
+        let thumb_url = item
             .get("poster_path")
             .and_then(|v| v.as_str())
             .map(|p| img_url(p, "/w92"));
-        let thumbnail_b64 = if let Some(ref url) = thumb {
-            fetch_image_as_b64(url).await
-        } else {
-            None
-        };
-        out.push(ApiSearchResult {
+
+        items.push((format!("{}:{}", media_type, id), title, year, creator, thumb_url));
+    }
+
+    // Fetch thumbnails concurrently instead of one at a time.
+    let thumbnails = join_all(items.iter().map(|(_, _, _, _, thumb_url)| async move {
+        match thumb_url {
+            Some(u) => fetch_image_as_b64(u).await,
+            None => None,
+        }
+    }))
+    .await;
+
+    let out = items
+        .into_iter()
+        .zip(thumbnails)
+        .map(|((provider_id, title, year, creator, _), thumbnail_b64)| ApiSearchResult {
             provider: "tmdb".to_string(),
-            provider_id: format!("{}:{}", media_type, id),
+            provider_id,
             title,
             year,
             creator,
             thumbnail_b64,
-        });
-    }
+        })
+        .collect();
+
     Ok(out)
 }
 

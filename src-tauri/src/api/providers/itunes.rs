@@ -1,6 +1,7 @@
 use crate::api::types::{ApiSearchResult, ApiMediaDetail, ApiImage};
 use crate::api::rate_limiter::RateLimiter;
 use crate::api::providers::{build_client, fetch_image_as_b64, retry};
+use futures::future::join_all;
 
 const BASE_URL: &str = "https://itunes.apple.com";
 const MAX_RESULTS: usize = 5;
@@ -39,7 +40,7 @@ pub async fn search(
         .cloned()
         .unwrap_or_default();
 
-    let mut out = Vec::new();
+    let mut items = Vec::new();
     for item in results.iter().take(MAX_RESULTS) {
         let id = item
             .get("trackId")
@@ -67,21 +68,34 @@ pub async fn search(
             .map(|s| s.to_string());
         let thumb_url = item
             .get("artworkUrl100")
-            .and_then(|v| v.as_str());
-        let thumbnail_b64 = if let Some(url) = thumb_url {
-            fetch_image_as_b64(url).await
-        } else {
-            None
-        };
-        out.push(ApiSearchResult {
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+
+        items.push((id, title, year, creator, thumb_url));
+    }
+
+    // Fetch thumbnails concurrently instead of one at a time.
+    let thumbnails = join_all(items.iter().map(|(_, _, _, _, thumb_url)| async move {
+        match thumb_url {
+            Some(u) => fetch_image_as_b64(u).await,
+            None => None,
+        }
+    }))
+    .await;
+
+    let out = items
+        .into_iter()
+        .zip(thumbnails)
+        .map(|((id, title, year, creator, _), thumbnail_b64)| ApiSearchResult {
             provider: "itunes".to_string(),
             provider_id: id,
             title,
             year,
             creator,
             thumbnail_b64,
-        });
-    }
+        })
+        .collect();
+
     Ok(out)
 }
 
@@ -97,7 +111,7 @@ pub async fn get_detail(
         async move {
             client
                 .get(format!("{}/lookup", BASE_URL))
-                .query(&[("id", id)])
+                .query(&[("id", id), ("entity", "song")])
                 .send()
                 .await
         }
@@ -107,11 +121,10 @@ pub async fn get_detail(
         return Err(format!("iTunes detail failed: {}", resp.status()));
     }
     let body: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
-    let item = match body
-        .get("results")
-        .and_then(|r| r.as_array())
-        .and_then(|a| a.first())
-    {
+    let results = body.get("results").and_then(|r| r.as_array());
+    // First result is always the collection (album) itself; entity=song adds
+    // the individual tracks after it, which is where trackTimeMillis lives.
+    let item = match results.and_then(|a| a.first()) {
         Some(i) => i,
         None => return Err("iTunes: no results found".to_string()),
     };
@@ -154,9 +167,16 @@ pub async fn get_detail(
         }
     }
 
-    let duration = item
-        .get("trackTimeMillis")
-        .and_then(|v| v.as_u64())
+    // Sum trackTimeMillis across the song entries (skip index 0, the album
+    // itself, which never carries this field).
+    let duration = results
+        .map(|arr| {
+            arr.iter()
+                .skip(1)
+                .filter_map(|t| t.get("trackTimeMillis").and_then(|v| v.as_u64()))
+                .sum::<u64>()
+        })
+        .filter(|&total_ms| total_ms > 0)
         .map(|ms| {
             let total_mins = ms / 60_000;
             let hours = total_mins / 60;

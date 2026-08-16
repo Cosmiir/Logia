@@ -21,7 +21,7 @@ const PROVIDER_LABELS: Record<string, string> = {
   anilist_anime: 'AniList',
   anilist_manga: 'AniList',
   rawg: 'RAWG',
-  thegamesdb: 'TheGamesDB',
+  igdb: 'IGDB',
   musicbrainz: 'MusicBrainz',
   itunes: 'iTunes',
 };

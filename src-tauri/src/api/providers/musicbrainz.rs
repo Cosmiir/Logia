@@ -1,4 +1,4 @@
-use crate::api::types::{ApiSearchResult, ApiMediaDetail};
+use crate::api::types::{ApiSearchResult, ApiMediaDetail, ApiImage};
 use crate::api::rate_limiter::RateLimiter;
 use crate::api::providers::{build_client, retry};
 
@@ -80,7 +80,12 @@ pub async fn get_detail(
 ) -> Result<ApiMediaDetail, String> {
     rate_limiter.acquire("musicbrainz").await;
     let client = build_client();
-    let resp = retry(3, || {
+
+    // The release lookup (musicbrainz.org) and the cover art lookup (a
+    // separate host, coverartarchive.org) are independent of each other, so
+    // run them concurrently instead of waiting on the release response
+    // before even starting the cover art request.
+    let release_future = retry(3, || {
         let client = &client;
         async move {
             client
@@ -89,8 +94,12 @@ pub async fn get_detail(
                 .send()
                 .await
         }
-    })
-    .await?;
+    });
+    let cover_art_future = fetch_cover_art(&client, id);
+
+    let (resp_res, images) = futures::join!(release_future, cover_art_future);
+
+    let resp = resp_res?;
     if !resp.status().is_success() {
         return Err(format!("MusicBrainz detail failed: {}", resp.status()));
     }
@@ -124,6 +133,44 @@ pub async fn get_detail(
         duration: None,
         genres: vec![],
         credits: vec![],
-        images: vec![],
+        images,
     })
+}
+
+/// Fetch cover art thumbnails for a release from the Cover Art Archive
+/// (coverartarchive.org), a companion service to MusicBrainz. Unlike the
+/// MusicBrainz API itself, it requires no API key and has no documented
+/// rate limit, so failures here are treated as "no cover art" rather than
+/// a hard error — a release without artwork is common and not exceptional.
+async fn fetch_cover_art(client: &reqwest::Client, release_id: &str) -> Vec<ApiImage> {
+    let resp = match client
+        .get(format!("https://coverartarchive.org/release/{}", release_id))
+        .send()
+        .await
+    {
+        Ok(r) if r.status().is_success() => r,
+        _ => return Vec::new(),
+    };
+    let body: serde_json::Value = match resp.json().await {
+        Ok(b) => b,
+        Err(_) => return Vec::new(),
+    };
+
+    let mut images = Vec::new();
+    if let Some(arr) = body.get("images").and_then(|i| i.as_array()) {
+        for img in arr.iter().take(8) {
+            let url = img
+                .pointer("/thumbnails/1200")
+                .or_else(|| img.pointer("/thumbnails/500"))
+                .or_else(|| img.get("image"))
+                .and_then(|v| v.as_str());
+            if let Some(url) = url {
+                images.push(ApiImage {
+                    url: url.to_string(),
+                    thumbnail_b64: None,
+                });
+            }
+        }
+    }
+    images
 }

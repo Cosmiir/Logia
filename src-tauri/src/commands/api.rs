@@ -38,15 +38,35 @@ pub async fn search_api_media(
 
     // Launch all provider searches in parallel
     let mut handles = Vec::new();
-    for provider_id in &providers {
-        let key = registry::get_key(provider_id, &settings);
-        let provider_id = provider_id.clone();
+    let mut searched_providers = Vec::new();
+    for raw_provider_id in &providers {
+        let provider_id = if raw_provider_id == "thegamesdb" {
+            "igdb".to_string()
+        } else {
+            raw_provider_id.clone()
+        };
+        if searched_providers.contains(&provider_id) {
+            continue;
+        }
+        searched_providers.push(provider_id.clone());
+
+        let key = registry::get_key(&provider_id, &settings);
         let query = query.clone();
         let rl = rate_limiter.clone();
         handles.push(tokio::spawn(async move {
-            providers::search(&provider_id, &query, key.as_deref(), &rl)
-                .await
-                .unwrap_or_default()
+            match providers::search(&provider_id, &query, key.as_deref(), &rl).await {
+                Ok(results) => results,
+                Err(e) => {
+                    // Degrade gracefully for the caller (other providers'
+                    // results still come back), but don't lose the reason —
+                    // previously this was `.unwrap_or_default()`, which
+                    // silently turned every provider error (missing key,
+                    // rate limit, network failure) into "0 results" with no
+                    // trace anywhere.
+                    eprintln!("Provider '{}' search failed: {}", provider_id, e);
+                    Vec::new()
+                }
+            }
         }));
     }
 

@@ -1,6 +1,7 @@
 use crate::api::types::{ApiSearchResult, ApiMediaDetail, ApiImage, ApiCredit};
 use crate::api::rate_limiter::RateLimiter;
 use crate::api::providers::{build_client, fetch_image_as_b64, retry};
+use futures::future::join_all;
 
 const BASE_URL: &str = "https://api.tvmaze.com";
 const MAX_RESULTS: usize = 5;
@@ -31,7 +32,7 @@ pub async fn search(
     let body: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
     let arr = body.as_array().cloned().unwrap_or_default();
 
-    let mut out = Vec::new();
+    let mut items = Vec::new();
     for entry in arr.iter().take(MAX_RESULTS) {
         let show = match entry.get("show") {
             Some(s) => s,
@@ -68,21 +69,34 @@ pub async fn search(
         let thumb_url = show
             .get("image")
             .and_then(|i| i.get("medium"))
-            .and_then(|v| v.as_str());
-        let thumbnail_b64 = if let Some(url) = thumb_url {
-            fetch_image_as_b64(url).await
-        } else {
-            None
-        };
-        out.push(ApiSearchResult {
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+
+        items.push((id, title, year, creator, thumb_url));
+    }
+
+    // Fetch thumbnails concurrently instead of one at a time.
+    let thumbnails = join_all(items.iter().map(|(_, _, _, _, thumb_url)| async move {
+        match thumb_url {
+            Some(u) => fetch_image_as_b64(u).await,
+            None => None,
+        }
+    }))
+    .await;
+
+    let out = items
+        .into_iter()
+        .zip(thumbnails)
+        .map(|((id, title, year, creator, _), thumbnail_b64)| ApiSearchResult {
             provider: "tvmaze".to_string(),
             provider_id: id,
             title,
             year,
             creator,
             thumbnail_b64,
-        });
-    }
+        })
+        .collect();
+
     Ok(out)
 }
 

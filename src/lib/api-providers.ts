@@ -23,7 +23,7 @@ export const PROVIDER_METADATA: ProviderMeta[] = [
   { id: 'jikan_manga', label: 'Jikan (MyAnimeList)', mediaType: 'manga', needsKey: false, keySetting: null, docUrl: 'https://docs.api.jikan.moe/' },
   { id: 'anilist_manga', label: 'AniList', mediaType: 'manga', needsKey: false, keySetting: null, docUrl: 'https://docs.anilist.co/' },
   { id: 'rawg', label: 'RAWG', mediaType: 'game', needsKey: true, keySetting: 'api_key_rawg', docUrl: 'https://rawg.io/apidocs' },
-  { id: 'thegamesdb', label: 'TheGamesDB', mediaType: 'game', needsKey: true, keySetting: 'api_key_thegamesdb', docUrl: 'https://api.thegamesdb.net/key.php' },
+  { id: 'igdb', label: 'IGDB', mediaType: 'game', needsKey: true, keySetting: 'api_key_igdb_client_id', docUrl: 'https://dev.twitch.tv/console' },
   { id: 'musicbrainz', label: 'MusicBrainz', mediaType: 'music', needsKey: false, keySetting: null, docUrl: 'https://musicbrainz.org/doc/MusicBrainz_API' },
   { id: 'itunes', label: 'iTunes', mediaType: 'music', needsKey: false, keySetting: null, docUrl: 'https://performance-partners.apple.com/search-api' },
 ];
@@ -63,7 +63,8 @@ export const API_KEY_SETTINGS: { key: string; label: string; docUrl: string }[] 
   { key: 'api_key_tmdb', label: 'TMDB', docUrl: 'https://developer.themoviedb.org/docs' },
   { key: 'api_key_omdb', label: 'OMDb', docUrl: 'https://www.omdbapi.com/apikey.aspx' },
   { key: 'api_key_rawg', label: 'RAWG', docUrl: 'https://rawg.io/apidocs' },
-  { key: 'api_key_thegamesdb', label: 'TheGamesDB', docUrl: 'https://api.thegamesdb.net/key.php' },
+  { key: 'api_key_igdb_client_id', label: 'IGDB (Client ID)', docUrl: 'https://dev.twitch.tv/console' },
+  { key: 'api_key_igdb_client_secret', label: 'IGDB (Client Secret)', docUrl: 'https://dev.twitch.tv/console' },
 ];
 
 /**
@@ -74,7 +75,15 @@ export function parseApiProviders(raw: string | null): string[] {
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    const result: string[] = [];
+    for (const item of parsed) {
+      const mapped = item === 'thegamesdb' ? 'igdb' : item;
+      if (typeof mapped === 'string' && !result.includes(mapped)) {
+        result.push(mapped);
+      }
+    }
+    return result;
   } catch {
     return [];
   }

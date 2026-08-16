@@ -85,12 +85,12 @@ const PROVIDERS: &[ProviderMeta] = &[
         doc_url: "https://rawg.io/apidocs",
     },
     ProviderMeta {
-        id: "thegamesdb",
-        label: "TheGamesDB",
+        id: "igdb",
+        label: "IGDB",
         media_type: "game",
         needs_key: true,
-        key_setting: Some("api_key_thegamesdb"),
-        doc_url: "https://api.thegamesdb.net/",
+        key_setting: Some("api_key_igdb_client_id"),
+        doc_url: "https://dev.twitch.tv/console",
     },
     ProviderMeta {
         id: "musicbrainz",
@@ -116,7 +116,11 @@ pub fn available_providers(settings: &HashMap<String, String>) -> Vec<ProviderIn
     PROVIDERS
         .iter()
         .map(|p| {
-            let available = if p.needs_key {
+            let available = if p.id == "igdb" {
+                let id_ok = settings.get("api_key_igdb_client_id").map(|v| !v.is_empty()).unwrap_or(false);
+                let secret_ok = settings.get("api_key_igdb_client_secret").map(|v| !v.is_empty()).unwrap_or(false);
+                id_ok && secret_ok
+            } else if p.needs_key {
                 p.key_setting
                     .and_then(|k| settings.get(k))
                     .map(|v| !v.is_empty())
@@ -139,6 +143,14 @@ pub fn available_providers(settings: &HashMap<String, String>) -> Vec<ProviderIn
 
 /// Get the API key for a provider from settings, if required.
 pub fn get_key(provider: &str, settings: &HashMap<String, String>) -> Option<String> {
+    if provider == "igdb" {
+        let client_id = settings.get("api_key_igdb_client_id")?.trim();
+        let client_secret = settings.get("api_key_igdb_client_secret")?.trim();
+        if !client_id.is_empty() && !client_secret.is_empty() {
+            return Some(format!("{}:{}", client_id, client_secret));
+        }
+        return None;
+    }
     let key_setting = PROVIDERS
         .iter()
         .find(|p| p.id == provider)

@@ -29,7 +29,7 @@ Built for people who consume varied media (movies, series, anime, manga, video g
 - Each collection has configurable labels (creator, date, progression unit, etc.)
 - Fully user-driven: no predefined collections, you build your own library from scratch
 - 100% manual entry by default: no dependency on any external API
-- Optional API enrichment: map collections to external providers (TMDB, Jikan, AniList, TVMaze, MusicBrainz, iTunes, RAWG, TheGamesDB, OMDb) to auto-fill media details on creation
+- Optional API enrichment: map collections to external providers (TMDB, Jikan, AniList, TVMaze, MusicBrainz, iTunes, RAWG, IGDB, OMDb) to auto-fill media details on creation
 
 ### 📊 Dual Status System
 - **Progress status**: Not Started, In Progress, On Hold, Completed, Abandoned

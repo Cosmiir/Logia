@@ -1,6 +1,7 @@
 use crate::api::types::{ApiCredit, ApiImage, ApiMediaDetail, ApiSearchResult};
 use crate::api::rate_limiter::RateLimiter;
 use crate::api::providers::{build_client, fetch_image_as_b64, retry};
+use futures::future::join_all;
 
 const BASE_URL: &str = "https://www.omdbapi.com";
 
@@ -36,7 +37,7 @@ pub async fn search(
         .cloned()
         .unwrap_or_default();
 
-    let mut out = Vec::new();
+    let mut items = Vec::new();
     for item in results.iter().take(5) {
         let id = item.get("imdbID").and_then(|v| v.as_str()).unwrap_or("").to_string();
         let title = item.get("Title").and_then(|v| v.as_str()).unwrap_or("").to_string();
@@ -45,22 +46,38 @@ pub async fn search(
         }
         let year = item.get("Year").and_then(|v| v.as_str()).map(|s| s.to_string());
         // OMDb search doesn't return director — will be fetched in detail
-        let creator = None;
-        let thumb = item.get("Poster").and_then(|v| v.as_str()).filter(|s| *s != "N/A");
-        let thumbnail_b64 = if let Some(url) = thumb {
-            fetch_image_as_b64(url).await
-        } else {
-            None
-        };
-        out.push(ApiSearchResult {
+        let creator: Option<String> = None;
+        let thumb_url = item
+            .get("Poster")
+            .and_then(|v| v.as_str())
+            .filter(|s| *s != "N/A")
+            .map(|s| s.to_string());
+
+        items.push((id, title, year, creator, thumb_url));
+    }
+
+    // Fetch thumbnails concurrently instead of one at a time.
+    let thumbnails = join_all(items.iter().map(|(_, _, _, _, thumb_url)| async move {
+        match thumb_url {
+            Some(u) => fetch_image_as_b64(u).await,
+            None => None,
+        }
+    }))
+    .await;
+
+    let out = items
+        .into_iter()
+        .zip(thumbnails)
+        .map(|((id, title, year, creator, _), thumbnail_b64)| ApiSearchResult {
             provider: "omdb".to_string(),
             provider_id: id,
             title,
             year,
             creator,
             thumbnail_b64,
-        });
-    }
+        })
+        .collect();
+
     Ok(out)
 }
 

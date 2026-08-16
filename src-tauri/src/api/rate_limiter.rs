@@ -57,7 +57,7 @@ impl RateLimiter {
         buckets.insert("tvmaze".to_string(), TokenBucket::new(2.0, 2.0));
         buckets.insert("anilist_anime".to_string(), TokenBucket::new(2.0, 2.0));
         buckets.insert("anilist_manga".to_string(), TokenBucket::new(2.0, 2.0));
-        buckets.insert("thegamesdb".to_string(), TokenBucket::new(2.0, 2.0));
+        buckets.insert("igdb".to_string(), TokenBucket::new(4.0, 4.0));
         buckets.insert("itunes".to_string(), TokenBucket::new(2.0, 2.0));
 
         Self {

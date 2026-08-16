@@ -4,21 +4,34 @@ pub mod tvmaze;
 pub mod jikan;
 pub mod anilist;
 pub mod rawg;
-pub mod thegamesdb;
+pub mod igdb;
 pub mod musicbrainz;
 pub mod itunes;
 
 use crate::api::types::{ApiSearchResult, ApiMediaDetail};
 use crate::api::rate_limiter::{user_agent, RateLimiter};
+use std::sync::OnceLock;
 
-/// Shared HTTP client builder. All providers use the same client with the
-/// Logia User-Agent header.
+static HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+
+/// Shared HTTP client. All providers use the same client with the Logia
+/// User-Agent header. `reqwest::Client` holds a connection pool internally
+/// (it's an `Arc` under the hood), so building it once and cloning it for
+/// every call — instead of constructing a brand new client per request —
+/// lets repeated requests to the same host (TMDB, image CDNs, etc.) reuse
+/// existing TCP/TLS connections instead of paying a fresh handshake every
+/// time. This matters a lot for `fetch_image_as_b64`, which used to build a
+/// new client for every single thumbnail download.
 pub fn build_client() -> reqwest::Client {
-    reqwest::Client::builder()
-        .user_agent(user_agent())
-        .timeout(std::time::Duration::from_secs(20))
-        .build()
-        .expect("Failed to build reqwest client")
+    HTTP_CLIENT
+        .get_or_init(|| {
+            reqwest::Client::builder()
+                .user_agent(user_agent())
+                .timeout(std::time::Duration::from_secs(20))
+                .build()
+                .expect("Failed to build reqwest client")
+        })
+        .clone()
 }
 
 /// Download image bytes from a URL, returning base64-encoded data.
@@ -51,7 +64,7 @@ pub async fn search(
         "anilist_anime" => anilist::search_anime(query, api_key, rate_limiter).await,
         "anilist_manga" => anilist::search_manga(query, api_key, rate_limiter).await,
         "rawg" => rawg::search(query, api_key, rate_limiter).await,
-        "thegamesdb" => thegamesdb::search(query, api_key, rate_limiter).await,
+        "igdb" => igdb::search(query, api_key, rate_limiter).await,
         "musicbrainz" => musicbrainz::search(query, api_key, rate_limiter).await,
         "itunes" => itunes::search(query, api_key, rate_limiter).await,
         _ => Err(format!("Unknown provider: {}", provider)),
@@ -74,7 +87,7 @@ pub async fn get_detail(
         "anilist_anime" => anilist::get_detail_anime(id, api_key, rate_limiter).await,
         "anilist_manga" => anilist::get_detail_manga(id, api_key, rate_limiter).await,
         "rawg" => rawg::get_detail(id, api_key, rate_limiter).await,
-        "thegamesdb" => thegamesdb::get_detail(id, api_key, rate_limiter).await,
+        "igdb" => igdb::get_detail(id, api_key, rate_limiter).await,
         "musicbrainz" => musicbrainz::get_detail(id, api_key, rate_limiter).await,
         "itunes" => itunes::get_detail(id, api_key, rate_limiter).await,
         _ => Err(format!("Unknown provider: {}", provider)),
