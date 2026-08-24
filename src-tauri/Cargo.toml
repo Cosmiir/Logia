@@ -1,6 +1,6 @@
 [package]
 name = "Logia"
-version = "1.0.9"
+version = "1.1.0"
 description = "Logia - Track your media progression and organize your collections"
 authors = ["Cosmiir"]
 edition = "2021"
@@ -41,4 +41,5 @@ reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"
 tokio = { version = "1", features = ["sync"] }
 urlencoding = "2"
 futures = "0.3"
+quick-xml = "0.36"
 

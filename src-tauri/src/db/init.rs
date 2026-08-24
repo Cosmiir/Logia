@@ -71,9 +71,12 @@ fn create_schema(conn: &Connection) -> Result<()> {
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             cover_path TEXT,
             cover_source_index INTEGER DEFAULT 0,
+            backdrop_path TEXT,
+            backdrop_source_index INTEGER DEFAULT 0,
             positive_points TEXT,
             negative_points TEXT,
             media_status TEXT,
+            external_url TEXT,
             FOREIGN KEY (collection_id) REFERENCES collections(id) ON DELETE CASCADE
         );
 
@@ -344,6 +347,31 @@ fn migrate_schema(conn: &Connection) -> Result<()> {
 
     // Clean up deprecated setting key if present
     let _ = conn.execute("DELETE FROM settings WHERE key = 'api_key_thegamesdb'", [])?;
+
+    // Add backdrop columns to media (backdrop image + source index)
+    let has_backdrop_path: bool = conn.query_row(
+        "SELECT COUNT(*) > 0 FROM pragma_table_info('media') WHERE name='backdrop_path'",
+        [],
+        |row| row.get(0),
+    )?;
+    if !has_backdrop_path {
+        conn.execute_batch(
+            "ALTER TABLE media ADD COLUMN backdrop_path TEXT;
+             ALTER TABLE media ADD COLUMN backdrop_source_index INTEGER DEFAULT 0;"
+        )?;
+    }
+
+    // Add external_url column to media (free-form link to trailer / store page / etc.)
+    let has_external_url: bool = conn.query_row(
+        "SELECT COUNT(*) > 0 FROM pragma_table_info('media') WHERE name='external_url'",
+        [],
+        |row| row.get(0),
+    )?;
+    if !has_external_url {
+        conn.execute_batch(
+            "ALTER TABLE media ADD COLUMN external_url TEXT;"
+        )?;
+    }
 
     Ok(())
 }

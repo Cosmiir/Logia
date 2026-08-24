@@ -24,6 +24,9 @@ const PROVIDER_LABELS: Record<string, string> = {
   igdb: 'IGDB',
   musicbrainz: 'MusicBrainz',
   itunes: 'iTunes',
+  google_books: 'Google Books',
+  openlibrary: 'Open Library',
+  bgg: 'BoardGameGeek',
 };
 
 const ApiSearchModal: React.FC<ApiSearchModalProps> = ({

@@ -25,9 +25,15 @@ import AppLogo from '@/components/AppLogo';
 interface SharedHeaderProps {
   activePage: PageType;
   disableLayoutAnimation?: boolean;
+  /** When true, header background is transparent so a page backdrop can show through */
+  transparent?: boolean;
+  /** When true, the LOGIA logo is not rendered (used by immersive pages like MediaDetail) */
+  hideLogo?: boolean;
+  /** Optional right-side content rendered before the notifications bell */
+  rightSlot?: React.ReactNode;
 }
 
-const SharedHeader: React.FC<SharedHeaderProps> = ({ activePage, disableLayoutAnimation }) => {
+const SharedHeader: React.FC<SharedHeaderProps> = ({ activePage, disableLayoutAnimation, transparent = false, hideLogo = false, rightSlot }) => {
   const { t } = useTranslation();
 
   const isTutorialActive = useTutorialStore((s) => s.isActive);
@@ -117,10 +123,10 @@ const SharedHeader: React.FC<SharedHeaderProps> = ({ activePage, disableLayoutAn
   const latestNotifications = notifications.slice(0, 5);
 
   return (
-    <header className="h-16 shrink-0 z-50 relative">
+    <header className={`h-16 z-50 ${transparent ? 'absolute top-0 left-0 right-0 bg-transparent' : 'relative shrink-0'}`}>
       <div className="h-full flex items-center justify-between px-10">
       {/* Logo */}
-      <AppLogo size="sm" />
+      {!hideLogo && <AppLogo size="sm" />}
 
       {/* Navigation — pill container */}
       <div className="hidden md:flex items-center h-[50px] absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
@@ -138,6 +144,8 @@ const SharedHeader: React.FC<SharedHeaderProps> = ({ activePage, disableLayoutAn
 
       {/* Right side */}
       <div className="flex items-center gap-2 pr-[2px]">
+        {rightSlot}
+
         {/* Notifications */}
         <div className="relative" ref={notificationDropdownRef}>
           <button

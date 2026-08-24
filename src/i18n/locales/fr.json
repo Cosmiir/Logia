@@ -459,6 +459,7 @@
     "duration": "Durée",
     "mediaStatus": "Statut du média",
     "cover": "Couverture",
+    "backdrop": "Image de fond",
     "progressTotal": "Total",
     "replays": "Relectures",
     "replayDates": "Dates de replay",
@@ -480,6 +481,15 @@
     "myExperience": "Mon expérience",
     "noReview": "Aucun avis rédigé",
     "download": "Télécharger",
+    "edit": "Modifier",
+    "read": "Lire",
+    "open": "Ouvrir",
+    "myList": "Ma liste",
+    "share": "Partager",
+    "director": "Réalisateur",
+    "release": "Sortie",
+    "averageRating": "Note moyenne",
+    "mainCast": "Casting principal",
     "readMore": "Lire la suite",
     "collapse": "Réduire",
     "lightboxHint": "Échap pour quitter · Double-clic pour zoomer"
@@ -535,8 +545,24 @@
     "titleRequired": "Le titre est requis",
     "searchViaApi": "Rechercher via API",
     "synopsis": "Synopsis",
+    "webLink": "Lien web",
     "crop": "Recadrer",
     "firstImageIsCover": "Première image = couverture",
+    "backdrop": "Image de fond",
+    "setAsBackdrop": "Définir comme fond",
+    "cropBackdrop": "Recadrer le fond",
+    "cropBackdropTitle": "Recadrer l'image de fond",
+    "backdropHint": "Choisir une image comme fond depuis la galerie",
+    "coverAndBackdrop": "Couverture & Fond",
+    "coverLabel": "Couverture",
+    "backdropLabel": "Fond",
+    "chooseSource": "Choisir la source",
+    "removeCover": "Supprimer la couverture",
+    "removeBackdrop": "Supprimer le fond",
+    "noImagesHint": "Ajoutez d'abord des images à la galerie",
+    "coverRemovedHint": "Aucune couverture définie",
+    "coverPreviewHint": "Aperçu couverture",
+    "galleryHint": "Glissez pour réorganiser. Gérez couverture et fond ci-dessous.",
     "uploadReading": "Lecture…",
     "uploadProcessing": "Conversion WebP…",
     "uploadSaving": "Sauvegarde…",
@@ -850,7 +876,9 @@
         "anime": "Anime",
         "manga": "Manga",
         "game": "Jeux Vidéo",
-        "music": "Musique"
+        "music": "Musique",
+        "book": "Livres",
+        "board_game": "Jeux de société"
       }
     }
   },
@@ -1304,10 +1332,6 @@
         "title": "Le synopsis",
         "desc": "Rédigez une description ou un résumé. Vous pouvez utiliser le formatage Markdown pour structurer votre texte."
       },
-      "mediaCover": {
-        "title": "Aperçu de la couverture",
-        "desc": "Cet encadré affiche l'image de couverture. Les images s'ajoutent dans la section Galerie plus bas, et la première servira de couverture (cliquez pour la recadrer)."
-      },
       "mediaGenres": {
         "title": "Les genres",
         "desc": "Associez des genres à votre média pour faciliter les filtres et affiner les recommandations de contenus similaires."
@@ -1325,8 +1349,8 @@
         "desc": "Attribuez une note sur 100 et listez vos points positifs ainsi que vos axes d'amélioration."
       },
       "mediaGallery": {
-        "title": "La galerie d'images",
-        "desc": "Ajoutez jusqu'à 12 images par média par glisser-déposer ou via le presse-papiers. Réorganisez-les ensuite facilement."
+        "title": "Galerie & visuels",
+        "desc": "Ajoutez jusqu'à 12 images par glisser-déposer ou via le presse-papiers, puis réorganisez-les. Sous la grille, choisissez quelle image sert de couverture (2:3) et de fond (16:9), recadrez/zoommez chacune, ou supprimez-les entièrement."
       },
       "mediaAttachments": {
         "title": "Les fichiers joints",

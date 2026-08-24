@@ -191,7 +191,7 @@ pub async fn get_detail(
         .get("Poster")
         .and_then(|v| v.as_str())
         .filter(|s| *s != "N/A")
-        .map(|url| vec![ApiImage { url: url.to_string(), thumbnail_b64: None }])
+        .map(|url| vec![ApiImage { url: url.to_string(), thumbnail_b64: None, kind: None }])
         .unwrap_or_default();
 
     Ok(ApiMediaDetail {

@@ -213,17 +213,6 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     interactive: true,
   },
   {
-    id: 'mediaCover',
-    type: 'info',
-    page: 'media-create',
-    phase: 'mediaCreation',
-    selector: '[data-tutorial="media-cover"]',
-    titleKey: 'tutorial.steps.mediaCover.title',
-    descKey: 'tutorial.steps.mediaCover.desc',
-    position: 'right',
-    interactive: true,
-  },
-  {
     id: 'mediaGenres',
     type: 'info',
     page: 'media-create',
@@ -349,13 +338,12 @@ const MEDIA_SECTION_UNLOCK_STEP: Record<string, number> = {
   mediaCreator: 14,
   mediaStatusDate: 15,
   mediaSynopsis: 16,
-  mediaCover: 17,
-  mediaGenres: 18,
-  mediaProgress: 19,
-  mediaReview: 20,
-  mediaRating: 21,
-  mediaGallery: 22,
-  mediaAttachments: 23,
+  mediaGenres: 17,
+  mediaProgress: 18,
+  mediaReview: 19,
+  mediaRating: 20,
+  mediaGallery: 21,
+  mediaAttachments: 22,
 };
 
 export function isTutorialSectionLocked(section: string): (state: TutorialState) => boolean {

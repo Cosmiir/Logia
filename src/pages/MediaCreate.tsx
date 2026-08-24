@@ -11,11 +11,7 @@ import {
   Crown,
   Trash2,
   Search,
-  Info,
   Zap,
-  Tag,
-  PenLine,
-  Image as ImageIcon,
   Play,
   CheckCircle2,
   Clock,
@@ -25,10 +21,12 @@ import {
   ThumbsUp,
   ThumbsDown,
   Activity,
-  Users,
   Paperclip,
   FileText,
   Edit2,
+  RectangleHorizontal,
+  Crop,
+  ImageOff,
 } from 'lucide-react';
 import {
   DndContext,
@@ -57,7 +55,7 @@ import { stat } from '@tauri-apps/plugin-fs';
 import { AppShell, MainContent } from '@/components/Layout';
 import SharedHeader from '@/components/SharedHeader';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import CoverCropModal from '@/components/CoverCropModal';
+import CoverCropModal from '@/components/MediaCropModal';
 import CustomDatePicker from '@/components/CustomDatePicker';
 import LanguagePicker from '@/components/LanguagePicker';
 import ApiSearchModal from '@/components/ApiSearchModal';
@@ -67,9 +65,13 @@ import { useTutorialStore, isTutorialSectionLocked } from '@/stores/useTutorialS
 import { useCollections } from '@/hooks/useCollections';
 import { useReviewTemplates } from '@/hooks/useReviewTemplates';
 import { usePeople } from '@/hooks/usePeople';
+import { useImageNaturalRatio } from '@/hooks/useImageNaturalRatio';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCreateMedia, useUpdateMedia, useMediaDetail } from '@/hooks/useMedia';
 import { getCollectionIconComponent } from '@/components/CollectionIcons';
+import MediaCreateHero, { MediaCreateBackdrop } from '@/components/MediaCreate/MediaCreateHero';
+import { SectionHeader as SharedSectionHeader } from '@/components/MediaDetail/SectionHeader';
+import NoteSegmentedBar from '@/components/MediaDetail/NoteSegmentedBar';
 import { getIconById } from '@/lib/collection-icons';
 import { tauriApi } from '@/lib/tauri-api';
 import { parseApiProviders } from '@/lib/api-providers';
@@ -95,6 +97,7 @@ interface GalleryImage {
   serverImageId?: number; // media_images.id from the backend
   filePath?: string; // original local path for dropped files
   apiUrl?: string; // remote API URL pending download on save
+  kind?: string | null; // image category hint from the provider ("poster", "backdrop")
 }
 
 
@@ -120,6 +123,7 @@ interface MediaFormState {
   releaseDate: string;
   experienceEntries: ExperienceEntryForm[];
   synopsis: string;
+  externalUrl: string;
   progressCurrent: number;
   progressTotal: number | null;
   progressStatus: 'NOT_STARTED' | 'IN_PROGRESS' | 'ON_HOLD' | 'COMPLETED' | 'ABANDONED';
@@ -134,6 +138,7 @@ interface MediaFormState {
   images: GalleryImage[];
   attachments: AttachedFile[];
   coverCrop: { x: number; y: number; zoom: number } | null;
+  backdropCrop: { x: number; y: number; zoom: number } | null;
   credits: MediaCredit[];
 }
 
@@ -151,18 +156,6 @@ import { MEDIA_STATUS_LABELS, MEDIA_STATUS_COLORS } from '@/lib/status-labels';
 /*  Review templates - loaded dynamically from database              */
 /* ================================================================== */
 // Templates are now loaded via useReviewTemplates hook in the component
-
-/* ================================================================== */
-/*  Section Header                                                     */
-/* ================================================================== */
-const SectionHeader: React.FC<{ icon: React.ElementType; title: string; color?: string }> = ({ icon: Icon, title, color = 'var(--theme-accent)' }) => (
-  <div className="flex items-center gap-2.5 mb-5 pb-3 border-b border-white/5">
-    <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${color}20` }}>
-      <Icon className="w-3.5 h-3.5" style={{ color }} />
-    </div>
-    <h2 className="text-base font-bold text-white">{title}</h2>
-  </div>
-);
 
 /* ================================================================== */
 /*  Media Status Picker                                                 */
@@ -1351,32 +1344,21 @@ const CreditsSelector: React.FC<CreditsSelectorProps> = ({
 const SortableGalleryImage: React.FC<{
   image: GalleryImage;
   index: number;
-  isCover: boolean;
   onRemove: (id: string) => void;
-  onSetCover: (index: number) => void;
-}> = ({ image, index, isCover, onRemove, onSetCover }) => {
+}> = ({ image, onRemove }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: image.id });
+  const { ratio, onLoad } = useImageNaturalRatio();
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.4 : 1,
+    aspectRatio: ratio,
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="relative group aspect-[3/4] rounded-xl overflow-hidden border border-white/10 bg-white/5">
-      <img src={image.preview} alt="" className="w-full h-full object-cover" />
-      {isCover && (
-        <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 bg-yellow-500/90 rounded-lg text-[10px] font-bold text-black uppercase">
-          <Crown className="w-3 h-3" />
-          Cover
-        </div>
-      )}
-      {!isCover && (
-        <button type="button" onClick={() => onSetCover(index)} className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg text-[10px] font-semibold text-white/70 hover:text-yellow-400 hover:bg-yellow-500/20 cursor-pointer opacity-0 group-hover:opacity-100 transition-all" title={i18next.t('mediaCreate.setAsCover')}>
-          <Crown className="w-3 h-3" />
-        </button>
-      )}
+    <div ref={setNodeRef} style={style} className="relative group h-48 rounded-xl overflow-hidden border border-white/10 bg-white/5">
+      <img src={image.preview} alt="" className="w-full h-full object-cover" onLoad={onLoad} />
       <div {...attributes} {...listeners} className="absolute top-2 right-2 p-1.5 bg-black/60 backdrop-blur-sm rounded-lg text-white/70 hover:text-white cursor-grab opacity-0 group-hover:opacity-100 transition-opacity">
         <GripVertical className="w-4 h-4" />
       </div>
@@ -1392,17 +1374,19 @@ const SortableGalleryImage: React.FC<{
 /* ================================================================== */
 /*  Progress Ring                                                      */
 /* ================================================================== */
-const ProgressRing: React.FC<{ value: number; size?: number }> = ({ value, size = 72 }) => {
+const ProgressRing: React.FC<{ value: number; size?: number; progressStatus?: string | null }> = ({ value, size = 56, progressStatus }) => {
   const stroke = 5;
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
   const displayValue = Math.min(value, 100);
   const offset = circumference - (displayValue / 100) * circumference;
+  // Color logic aligned with ProgressionWithDatesCard (MediaDetail)
   const getColor = () => {
+    if (progressStatus === 'ABANDONED') return '#ef4444';
     if (value > 100) return '#a855f7';
-    if (value === 100) return '#10b981';
+    if (value >= 100) return '#22c55e';
     if (value >= 50) return '#3b82f6';
-    if (value > 0) return '#f59e0b';
+    if (value > 0) return '#f97316';
     return '#64748b';
   };
   const color = getColor();
@@ -1427,7 +1411,11 @@ const CoverPreviewImg: React.FC<{
   src: string;
   cropData: { x: number; y: number; zoom: number } | null;
   containerW: number;
-}> = ({ src, cropData, containerW }) => {
+  /** Modal preview frame width used to generate the crop (default 200, cover) */
+  modalW?: number;
+  /** Modal preview frame height used to generate the crop (default 300, cover) */
+  modalH?: number;
+}> = ({ src, cropData, containerW, modalW = 200, modalH = 300 }) => {
   const [natSize, setNatSize] = useState<{ w: number; h: number } | null>(null);
 
   useEffect(() => {
@@ -1440,13 +1428,11 @@ const CoverPreviewImg: React.FC<{
     return <img src={src} alt="" className="w-full h-full object-cover select-none pointer-events-none" />;
   }
 
-  // The CoverCropModal uses a 200×300 frame. Reproduce its math at any container size.
-  const MODAL_W = 200;
-  const MODAL_H = 300;
-  const coverScale = Math.max(MODAL_W / natSize.w, MODAL_H / natSize.h);
+  // Reproduce the crop modal math at any container size.
+  const coverScale = Math.max(modalW / natSize.w, modalH / natSize.h);
   const totalScale = coverScale * cropData.zoom;
   // Scale from modal-space to container-space
-  const ratio = containerW / MODAL_W;
+  const ratio = containerW / modalW;
 
   return (
     <img
@@ -1462,6 +1448,201 @@ const CoverPreviewImg: React.FC<{
         maxWidth: 'none',
       }}
     />
+  );
+};
+
+/* ================================================================== */
+/*  Cover & Backdrop Panel — unified management inside the gallery     */
+/* ================================================================== */
+const CoverBackdropPanel: React.FC<{
+  images: GalleryImage[];
+  coverImageIndex: number;
+  backdropImageIndex: number;
+  coverCrop: { x: number; y: number; zoom: number } | null;
+  backdropCrop: { x: number; y: number; zoom: number } | null;
+  editCoverUrl: string | null;
+  editBackdropUrl: string | null;
+  coverRemoved: boolean;
+  backdropRemoved: boolean;
+  onSelectCoverSource: (idx: number) => void;
+  onSelectBackdropSource: (idx: number) => void;
+  onCropCover: () => void;
+  onCropBackdrop: () => void;
+  onRemoveCover: () => void;
+  onRemoveBackdrop: () => void;
+}> = ({
+  images, coverImageIndex, backdropImageIndex, coverCrop, backdropCrop,
+  editCoverUrl, editBackdropUrl, coverRemoved, backdropRemoved,
+  onSelectCoverSource, onSelectBackdropSource, onCropCover, onCropBackdrop,
+  onRemoveCover, onRemoveBackdrop,
+}) => {
+  const { t } = useTranslation();
+  const [showCoverSource, setShowCoverSource] = useState(false);
+  const [showBackdropSource, setShowBackdropSource] = useState(false);
+  const coverSourceRef = useRef<HTMLDivElement>(null);
+  const backdropSourceRef = useRef<HTMLDivElement>(null);
+  const hasImages = images.length > 0;
+  const coverImage = hasImages ? (images[coverImageIndex] ?? images[0]) : null;
+  const backdropImage = hasImages ? (images[backdropImageIndex] ?? images[0]) : null;
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (coverSourceRef.current && !coverSourceRef.current.contains(e.target as Node)) setShowCoverSource(false);
+      if (backdropSourceRef.current && !backdropSourceRef.current.contains(e.target as Node)) setShowBackdropSource(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const renderPreview = (
+    image: GalleryImage | null,
+    crop: { x: number; y: number; zoom: number } | null,
+    editUrl: string | null,
+    removed: boolean,
+    containerW: number,
+    modalW: number,
+    modalH: number,
+  ) => {
+    if (removed || !hasImages) {
+      return (
+        <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 text-white/20">
+          <ImageOff className="w-5 h-5" />
+          <span className="text-[9px] font-medium text-center px-1.5 leading-tight">
+            {removed ? t('mediaCreate.coverRemovedHint') : t('mediaCreate.noImagesHint')}
+          </span>
+        </div>
+      );
+    }
+    if (editUrl && !crop) {
+      return <img src={editUrl} alt="" className="w-full h-full object-cover select-none pointer-events-none" />;
+    }
+    if (image) {
+      return <CoverPreviewImg src={image.preview} cropData={crop} containerW={containerW} modalW={modalW} modalH={modalH} />;
+    }
+    return null;
+  };
+
+  const SourceDropdown: React.FC<{
+    open: boolean;
+    images: GalleryImage[];
+    currentIndex: number;
+    onSelect: (idx: number) => void;
+  }> = ({ open, images, currentIndex, onSelect }) => {
+    if (!open) return null;
+    return (
+      <div className="absolute z-50 top-full left-0 right-0 mt-1.5 bg-[#12141f]/98 backdrop-blur-2xl border border-white/10 rounded-xl shadow-2xl p-1.5 max-h-56 overflow-y-auto custom-scrollbar">
+        {images.map((img, idx) => (
+          <button
+            key={img.id}
+            type="button"
+            onClick={() => { onSelect(idx); setShowCoverSource(false); setShowBackdropSource(false); }}
+            className={`w-full flex items-center gap-2 px-1.5 py-1.5 rounded-lg transition-all cursor-pointer text-left ${idx === currentIndex ? 'bg-primary/10' : 'hover:bg-white/[0.06]'}`}
+          >
+            <div className="w-8 h-8 rounded-md overflow-hidden bg-white/5 shrink-0">
+              <img src={img.preview} alt="" className="w-full h-full object-cover" draggable={false} />
+            </div>
+            <span className={`text-[11px] font-semibold truncate ${idx === currentIndex ? 'text-primary' : 'text-white/80'}`}>
+              #{idx + 1}
+            </span>
+            {idx === currentIndex && <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0 ml-auto" />}
+          </button>
+        ))}
+      </div>
+    );
+  };
+
+  const Card = ({
+    kind, // 'cover' | 'backdrop'
+  }: { kind: 'cover' | 'backdrop' }) => {
+    const isCover = kind === 'cover';
+    const image = isCover ? coverImage : backdropImage;
+    const crop = isCover ? coverCrop : backdropCrop;
+    const editUrl = isCover ? editCoverUrl : editBackdropUrl;
+    const removed = isCover ? coverRemoved : backdropRemoved;
+    const idx = isCover ? coverImageIndex : backdropImageIndex;
+    const containerW = isCover ? 120 : 320;
+    const modalW = isCover ? 200 : 320;
+    const modalH = isCover ? 300 : 180;
+    const accent = isCover ? '#eab308' : '#0ea5e9';
+    const Icon = isCover ? Crown : RectangleHorizontal;
+    const open = isCover ? showCoverSource : showBackdropSource;
+    const setOpen = isCover ? setShowCoverSource : setShowBackdropSource;
+    const ref = isCover ? coverSourceRef : backdropSourceRef;
+    const onSelect = isCover ? onSelectCoverSource : onSelectBackdropSource;
+    const onCrop = isCover ? onCropCover : onCropBackdrop;
+    const onRemove = isCover ? onRemoveCover : onRemoveBackdrop;
+    // Same height for both; width derives from aspect ratio
+    const previewClass = isCover ? 'h-[180px] aspect-[2/3]' : 'h-[180px] aspect-[16/9]';
+
+    return (
+      <div className={`flex flex-col gap-2 ${isCover ? '' : 'flex-1 min-w-0'}`}>
+        <div className="flex items-center gap-1.5">
+          <Icon className="w-3 h-3 shrink-0" style={{ color: accent }} />
+          <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: accent }}>
+            {isCover ? t('mediaCreate.coverLabel') : t('mediaCreate.backdropLabel')}
+          </span>
+        </div>
+
+        <div className="relative w-fit">
+          {/* Preview frame */}
+          <div className={`${previewClass} rounded-xl overflow-hidden border border-white/10 bg-white/[0.02] relative`}>
+            {renderPreview(image, crop, editUrl, removed, containerW, modalW, modalH)}
+          </div>
+
+          {/* Action bar below preview */}
+          <div className="mt-2 flex items-center gap-1.5 min-w-[200px]">
+            {/* Source selector */}
+            <div ref={ref} className="relative flex-1 min-w-0">
+              <button
+                type="button"
+                disabled={!hasImages}
+                onClick={() => setOpen(!open)}
+                className={`w-full flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[10px] font-semibold border transition-all ${hasImages ? 'bg-white/5 border-white/10 hover:bg-white/[0.08] hover:border-white/20 text-white/70 cursor-pointer' : 'bg-white/[0.02] border-white/5 text-white/20 cursor-not-allowed'}`}
+              >
+                <span className="truncate flex-1 text-left">
+                  {hasImages ? (removed ? t('mediaCreate.chooseSource') : `#${idx + 1}`) : t('mediaCreate.noImagesHint')}
+                </span>
+                <ChevronDown className={`w-3 h-3 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+              </button>
+              <SourceDropdown open={open && hasImages} images={images} currentIndex={idx} onSelect={onSelect} />
+            </div>
+            {/* Crop button */}
+            <button
+              type="button"
+              disabled={!hasImages || removed}
+              onClick={onCrop}
+              title={isCover ? t('mediaCreate.cropCover') : t('mediaCreate.cropBackdrop')}
+              className={`p-1.5 rounded-lg border transition-all shrink-0 ${hasImages && !removed ? 'bg-white/5 border-white/10 hover:bg-white/[0.08] hover:border-white/20 text-white/70 cursor-pointer' : 'bg-white/[0.02] border-white/5 text-white/20 cursor-not-allowed'}`}
+            >
+              <Crop className="w-3.5 h-3.5" />
+            </button>
+            {/* Remove button */}
+            <button
+              type="button"
+              disabled={!hasImages}
+              onClick={onRemove}
+              title={isCover ? t('mediaCreate.removeCover') : t('mediaCreate.removeBackdrop')}
+              className={`p-1.5 rounded-lg border transition-all shrink-0 ${hasImages ? 'bg-red-500/10 border-red-500/20 hover:bg-red-500/20 hover:border-red-500/40 text-red-400 cursor-pointer' : 'bg-white/[0.02] border-white/5 text-white/20 cursor-not-allowed'}`}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="mt-5 pt-4 border-t border-white/5">
+      <div className="flex items-center gap-1.5 mb-3">
+        <div className="w-1 h-3 rounded-full bg-gradient-to-r from-yellow-500 to-sky-500" />
+        <span className="text-[10px] uppercase tracking-wider font-bold text-white/50">{t('mediaCreate.coverAndBackdrop')}</span>
+      </div>
+      <div className="flex flex-col sm:flex-row gap-4 items-start">
+        <Card kind="cover" />
+        <Card kind="backdrop" />
+      </div>
+    </div>
   );
 };
 
@@ -1577,7 +1758,6 @@ const MediaCreate: React.FC = () => {
   const creatorLocked = useTutorialStore(isTutorialSectionLocked('mediaCreator'));
   const statusDateLocked = useTutorialStore(isTutorialSectionLocked('mediaStatusDate'));
   const synopsisLocked = useTutorialStore(isTutorialSectionLocked('mediaSynopsis'));
-  const coverLocked = useTutorialStore(isTutorialSectionLocked('mediaCover'));
   const genresLocked = useTutorialStore(isTutorialSectionLocked('mediaGenres'));
   const progressLocked = useTutorialStore(isTutorialSectionLocked('mediaProgress'));
   const reviewLocked = useTutorialStore(isTutorialSectionLocked('mediaReview'));
@@ -1611,6 +1791,8 @@ const MediaCreate: React.FC = () => {
   const [deletedAttachmentIds, setDeletedAttachmentIds] = useState<number[]>([]);
   // Track if cover source changed without explicit recrop
   const [coverSourceChanged, setCoverSourceChanged] = useState(false);
+  // Track if backdrop source changed without explicit recrop
+  const [backdropSourceChanged, setBackdropSourceChanged] = useState(false);
 
   const [showCollectionDropdown, setShowCollectionDropdown] = useState(false);
   const collectionDropdownRef = useRef<HTMLDivElement>(null);
@@ -1627,6 +1809,7 @@ const MediaCreate: React.FC = () => {
     releaseDate: '',
     experienceEntries: [{ date: '', version: '', language: '' }],
     synopsis: '',
+    externalUrl: '',
     progressCurrent: 0,
     progressTotal: null,
     progressStatus: 'NOT_STARTED',
@@ -1641,6 +1824,7 @@ const MediaCreate: React.FC = () => {
     images: [],
     attachments: [],
     coverCrop: null,
+    backdropCrop: null,
     credits: [],
   });
 
@@ -1652,6 +1836,15 @@ const MediaCreate: React.FC = () => {
   const [coverImageIndex, setCoverImageIndex] = useState(0);
   // In edit mode, store the existing cropped cover URL to display instead of full image
   const [editCoverUrl, setEditCoverUrl] = useState<string | null>(null);
+  // Track which image index is used as backdrop source (independent of drag order)
+  const [backdropImageIndex, setBackdropImageIndex] = useState(0);
+  // In edit mode, store the existing cropped backdrop URL to display instead of full image
+  const [editBackdropUrl, setEditBackdropUrl] = useState<string | null>(null);
+  // Backdrop crop modal visibility
+  const [showBackdropCrop, setShowBackdropCrop] = useState(false);
+  // Track if user explicitly removed cover/backdrop (to skip generation + clear on save)
+  const [coverRemoved, setCoverRemoved] = useState(false);
+  const [backdropRemoved, setBackdropRemoved] = useState(false);
 
   const [currentInputVal, setCurrentInputVal] = useState<string>('0');
   const [totalInputVal, setTotalInputVal] = useState<string>('');
@@ -1682,6 +1875,8 @@ const MediaCreate: React.FC = () => {
   const droppedFilePathsRef = useRef<string[]>([]);
   const attachmentFilePathsRef = useRef<string[]>([]);
   const originalAttachmentNamesRef = useRef<Map<number, string>>(new Map());
+  // Track current form images count for API pre-fill index calculations
+  const formImagesCountRef = useRef(0);
 
   // Helper to convert File to base64 efficiently
   const toBase64 = (file: File): Promise<string> =>
@@ -1730,6 +1925,7 @@ const MediaCreate: React.FC = () => {
       releaseDate: m.release_date || '',
       experienceEntries,
       synopsis: m.synopsis || '',
+      externalUrl: m.external_url || '',
       progressCurrent: m.progress_current ?? 0,
       progressTotal: m.progress_total ?? null,
       progressStatus: m.progress_status ?? 'NOT_STARTED',
@@ -1744,6 +1940,7 @@ const MediaCreate: React.FC = () => {
       images: existingImages,
       attachments: existingAttachments,
       coverCrop: null,
+      backdropCrop: null,
       credits: m.credits || [],
     });
     // Store cropped cover URL if it exists
@@ -1752,6 +1949,12 @@ const MediaCreate: React.FC = () => {
     }
     // Restore which image is the cover source
     setCoverImageIndex(m.cover_source_index ?? 0);
+    // Store cropped backdrop URL if it exists
+    if (m.backdrop_image) {
+      setEditBackdropUrl(convertFileSrc(m.backdrop_image));
+    }
+    // Restore which image is the backdrop source
+    setBackdropImageIndex(m.backdrop_source_index ?? 0);
     setEditFormLoaded(true);
   }, [isEditMode, existingMedia, editFormLoaded]);
 
@@ -1786,7 +1989,7 @@ const MediaCreate: React.FC = () => {
     return JSON.stringify({
       title: f.title, collectionId: f.collectionId, creator: f.creator,
       releaseDate: f.releaseDate, experienceEntries: f.experienceEntries,
-      synopsis: f.synopsis, progressCurrent: f.progressCurrent,
+      synopsis: f.synopsis, externalUrl: f.externalUrl, progressCurrent: f.progressCurrent,
       progressTotal: f.progressTotal, progressStatus: f.progressStatus,
       replayCount: f.replayCount,
       userRating: f.userRating, userReview: f.userReview,
@@ -1795,9 +1998,14 @@ const MediaCreate: React.FC = () => {
       genres: f.genres.map(g => g.id).sort(), imageCount: f.images.length,
       attachmentCount: f.attachments.length,
       coverCrop: f.coverCrop,
+      backdropCrop: f.backdropCrop,
+      coverImageIndex,
+      backdropImageIndex,
+      coverRemoved,
+      backdropRemoved,
       credits: f.credits.map(c => ({ person_id: c.person_id, role: c.role })),
     });
-  }, []);
+  }, [coverImageIndex, backdropImageIndex, coverRemoved, backdropRemoved]);
 
   // Snapshot initial form after edit-mode load or on first render for create
   useEffect(() => {
@@ -1813,6 +2021,11 @@ const MediaCreate: React.FC = () => {
     formDirtyRef.current = serializeForm(form) !== initialFormSnapshotRef.current;
   }, [form, serializeForm]);
 
+  // Keep formImagesCountRef in sync for use in handleApiPreFill (avoids stale closure)
+  useEffect(() => {
+    formImagesCountRef.current = form.images.length;
+  }, [form.images.length]);
+
   // Compute which fields changed, grouped by section with colors
   const getChangedFieldGroups = useCallback((): { section: string; color: string; fields: string[] }[] => {
     if (!initialFormSnapshotRef.current) return [];
@@ -1827,9 +2040,11 @@ const MediaCreate: React.FC = () => {
       if (diff('creator')) infoFields.push(i18next.t('common.creator'));
       if (diff('releaseDate')) infoFields.push(i18next.t('media.releaseDate'));
       if (diff('synopsis')) infoFields.push(i18next.t('mediaDetail.synopsis'));
+      if (diff('externalUrl')) infoFields.push(i18next.t('mediaCreate.webLink'));
       if (diff('durationInfo')) infoFields.push(i18next.t('mediaDetail.duration'));
       if (diff('mediaStatus')) infoFields.push(i18next.t('mediaDetail.mediaStatus'));
-      if (diff('coverCrop')) infoFields.push(i18next.t('mediaDetail.cover'));
+      if (diff('coverCrop') || diff('coverImageIndex') || diff('coverRemoved')) infoFields.push(i18next.t('mediaDetail.cover'));
+      if (diff('backdropCrop') || diff('backdropImageIndex') || diff('backdropRemoved')) infoFields.push(i18next.t('mediaDetail.backdrop'));
 
       const progressFields: string[] = [];
       if (diff('progressStatus') || diff('progressCurrent')) progressFields.push(i18next.t('common.progress'));
@@ -1958,18 +2173,41 @@ const MediaCreate: React.FC = () => {
   // Handle API enrichment pre-fill: populate form fields from API detail
   const handleApiPreFill = useCallback(
     async (detail: ApiMediaDetail) => {
-      // 1. Images
+      // 1. Images — append API images to existing ones (don't replace).
+      // In edit mode, existing images remain in the DB and API images are
+      // appended after them, so form indices must account for the existing count.
+      const existingCount = formImagesCountRef.current;
+      const remainingSlots = MAX_IMAGES_PER_MEDIA - existingCount;
       const apiGalleryImages: GalleryImage[] = detail.images
-        .slice(0, MAX_IMAGES_PER_MEDIA)
+        .slice(0, Math.max(0, remainingSlots))
         .map((img, idx) => ({
           id: `api-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 7)}`,
           file: null,
           preview: img.url,
           isExisting: false,
           apiUrl: img.url,
+          kind: img.kind ?? null,
         }));
 
       setPendingApiImages(apiGalleryImages.map((img) => img.apiUrl!));
+
+      // Auto-assign cover (first poster) and backdrop (first backdrop) based on
+      // the `kind` hint. Indices are offset by existingCount to match the
+      // merged list [existing images, ...API images] and the DB order.
+      const posterIdx = apiGalleryImages.findIndex((img) => img.kind === 'poster');
+      const backdropIdx = apiGalleryImages.findIndex((img) => img.kind === 'backdrop');
+      if (posterIdx >= 0) {
+        setCoverImageIndex(existingCount + posterIdx);
+        updateField('coverCrop', null);
+        setEditCoverUrl(null);
+        setCoverSourceChanged(true);
+      }
+      if (backdropIdx >= 0) {
+        setBackdropImageIndex(existingCount + backdropIdx);
+        updateField('backdropCrop', null);
+        setEditBackdropUrl(null);
+        setBackdropSourceChanged(true);
+      }
 
       // 2. Genres & Tags
       let resolvedGenres: Genre[] = [];
@@ -2027,9 +2265,30 @@ const MediaCreate: React.FC = () => {
             if (match) {
               personId = match.id;
               photoPath = match.photo_path;
+              // If existing person has no photo but the API provides one,
+              // download it and update the person record.
+              if (!photoPath && c.photo_url) {
+                try {
+                  const b64 = await tauriApi.apiEnrichment.fetchImageB64(c.photo_url);
+                  if (b64) {
+                    await tauriApi.people.update(match.id, match.name, b64);
+                  }
+                } catch (err) {
+                  console.error('Failed to download actor photo:', err);
+                }
+              }
             } else {
               try {
-                personId = await tauriApi.people.create(cleanName);
+                // Download actor photo (if any) before creating the person
+                let photoB64: string | null = null;
+                if (c.photo_url) {
+                  try {
+                    photoB64 = await tauriApi.apiEnrichment.fetchImageB64(c.photo_url);
+                  } catch (err) {
+                    console.error('Failed to download actor photo:', err);
+                  }
+                }
+                personId = await tauriApi.people.create(cleanName, photoB64);
               } catch {
                 return null;
               }
@@ -2044,6 +2303,22 @@ const MediaCreate: React.FC = () => {
           });
           const results = await Promise.all(creditPromises);
           resolvedCredits = results.filter((c): c is MediaCredit => c !== null);
+
+          // Refetch people once to resolve photo_paths for newly created or
+          // updated persons (create/update do not return the stored path).
+          if (resolvedCredits.some((c) => !c.photo_path)) {
+            try {
+              const updatedPeople = await tauriApi.people.getAll();
+              const photoMap = new Map(updatedPeople.map((p) => [p.id, p.photo_path]));
+              resolvedCredits = resolvedCredits.map((c) => ({
+                ...c,
+                photo_path: photoMap.get(c.person_id) ?? c.photo_path,
+              }));
+            } catch (err) {
+              console.error('Failed to refetch people photo paths:', err);
+            }
+          }
+
           queryClient.invalidateQueries({ queryKey: ['people'] });
         } catch (err) {
           console.error('Failed to pre-fill credits:', err);
@@ -2058,14 +2333,14 @@ const MediaCreate: React.FC = () => {
         mediaStatus: (detail.media_status as MediaFormState['mediaStatus']) || prev.mediaStatus,
         synopsis: detail.synopsis || prev.synopsis,
         progressTotal: detail.duration ?? prev.progressTotal,
-        images: apiGalleryImages.length > 0 ? apiGalleryImages : prev.images,
+        images: apiGalleryImages.length > 0 ? [...prev.images, ...apiGalleryImages] : prev.images,
         genres: resolvedGenres.length > 0 ? resolvedGenres : prev.genres,
         credits: resolvedCredits.length > 0 ? resolvedCredits : prev.credits,
       }));
 
       setShowApiSearch(false);
     },
-    [queryClient],
+    [queryClient, updateField],
   );
 
   const handleRenameGenreInForm = useCallback(
@@ -2193,22 +2468,81 @@ const MediaCreate: React.FC = () => {
       updateField('coverCrop', null);
       setEditCoverUrl(null);
       setCoverSourceChanged(true);
+      // If cover was previously removed, keep it removed; otherwise mark source changed
     } else if (removedIdx < coverImageIndex) {
       setCoverImageIndex((prev) => Math.max(0, prev - 1));
     }
 
-    // If this was the last image and we're in edit mode, clear the cover
+    // Adjust backdropImageIndex if needed
+    if (removedIdx === backdropImageIndex) {
+      setBackdropImageIndex(0);
+      updateField('backdropCrop', null);
+      setEditBackdropUrl(null);
+      setBackdropSourceChanged(true);
+    } else if (removedIdx < backdropImageIndex) {
+      setBackdropImageIndex((prev) => Math.max(0, prev - 1));
+    }
+
+    // If this was the last image and we're in edit mode, clear the cover and backdrop
     if (isLastImage && isEditMode && editingMediaId) {
       try {
         await tauriApi.media.clearCover(editingMediaId);
         setEditCoverUrl(null);
+        await tauriApi.media.clearBackdrop(editingMediaId);
+        setEditBackdropUrl(null);
       } catch (err) {
-        console.error('Failed to clear cover:', err);
+        console.error('Failed to clear cover/backdrop:', err);
       }
     }
   };
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  // ── Cover & Backdrop management handlers (unified panel) ──
+  // Selecting a source image for cover (cancels any prior removal)
+  const handleSelectCoverSource = (idx: number) => {
+    setCoverImageIndex(idx);
+    updateField('coverCrop', null);
+    setEditCoverUrl(null);
+    setCoverSourceChanged(true);
+    setCoverRemoved(false);
+  };
+  // Selecting a source image for backdrop (cancels any prior removal)
+  const handleSelectBackdropSource = (idx: number) => {
+    setBackdropImageIndex(idx);
+    updateField('backdropCrop', null);
+    setEditBackdropUrl(null);
+    setBackdropSourceChanged(true);
+    setBackdropRemoved(false);
+  };
+  // Explicitly unset the cover
+  const handleRemoveCover = async () => {
+    updateField('coverCrop', null);
+    setEditCoverUrl(null);
+    setCoverSourceChanged(false);
+    setCoverRemoved(true);
+    if (isEditMode && editingMediaId) {
+      try {
+        await tauriApi.media.clearCover(editingMediaId);
+      } catch (err) {
+        console.error('Failed to clear cover:', err);
+      }
+    }
+  };
+  // Explicitly unset the backdrop
+  const handleRemoveBackdrop = async () => {
+    updateField('backdropCrop', null);
+    setEditBackdropUrl(null);
+    setBackdropSourceChanged(false);
+    setBackdropRemoved(true);
+    if (isEditMode && editingMediaId) {
+      try {
+        await tauriApi.media.clearBackdrop(editingMediaId);
+      } catch (err) {
+        console.error('Failed to clear backdrop:', err);
+      }
+    }
+  };
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
@@ -2225,6 +2559,16 @@ const MediaCreate: React.FC = () => {
       return prev;
     })();
     setCoverImageIndex(newCoverIndex);
+
+    // Track the backdrop image across the reorder
+    const newBackdropIndex = (() => {
+      const prev = backdropImageIndex;
+      if (prev === oldIndex) return newIndex;
+      if (oldIndex < prev && newIndex >= prev) return prev - 1;
+      if (oldIndex > prev && newIndex <= prev) return prev + 1;
+      return prev;
+    })();
+    setBackdropImageIndex(newBackdropIndex);
 
     // Reorder images in state
     const newImages = arrayMove(form.images, oldIndex, newIndex);
@@ -2375,7 +2719,14 @@ const MediaCreate: React.FC = () => {
         language: e.language || null,
         position: idx,
       }));
-      const firstEntryDate = form.experienceEntries.find(e => e.date)?.date || '';
+      // Use the most recent experience date (MAX) so sorting/filtering/stats
+      // reflect the latest viewing, not the first one.
+      // Dates are ISO (YYYY-MM-DD), so lexicographic sort == chronological.
+      const lastEntryDate = form.experienceEntries
+        .map(e => e.date)
+        .filter(Boolean)
+        .sort()
+        .pop() || '';
 
       if (isEditMode && editingMediaId) {
         // UPDATE existing media
@@ -2385,9 +2736,10 @@ const MediaCreate: React.FC = () => {
           title: form.title.trim(),
           creator: form.creator.trim() || undefined,
           release_date: form.releaseDate || undefined,
-          experience_date: firstEntryDate || '',
+          experience_date: lastEntryDate || '',
           experience_entries: experienceEntriesInput,
           synopsis: form.synopsis.trim(),
+          external_url: form.externalUrl.trim(),
           user_rating: form.userRating ?? undefined,
           user_review: form.userReview.trim(),
           positive_points: form.positivePoints.trim(),
@@ -2408,9 +2760,10 @@ const MediaCreate: React.FC = () => {
           title: form.title.trim(),
           creator: form.creator.trim() || undefined,
           release_date: form.releaseDate || undefined,
-          experience_date: firstEntryDate || undefined,
+          experience_date: lastEntryDate || undefined,
           experience_entries: experienceEntriesInput,
           synopsis: form.synopsis.trim() || undefined,
+          external_url: form.externalUrl.trim() || undefined,
           user_rating: form.userRating ?? undefined,
           user_review: form.userReview.trim() || undefined,
           positive_points: form.positivePoints.trim() || undefined,
@@ -2529,12 +2882,15 @@ const MediaCreate: React.FC = () => {
       const droppedPaths = droppedImages.map((img) => img.filePath).filter((p): p is string => !!p);
       droppedFilePathsRef.current = []; // Clear dropped paths ref after reading
 
-      // Calcul du total global : images + 1 étape cover si elle sera générée
+      // Calcul du total global : images + 1 étape cover + 1 étape backdrop si générées
       const pastedImagesPrecount = form.images.filter((img) => !img.isExisting && img.file).length;
-      const willGenerateCover = form.images.length > 0 && (
+      const willGenerateCover = form.images.length > 0 && !coverRemoved && (
         form.coverCrop !== null || coverSourceChanged || !isEditMode || editCoverUrl === null
       );
-      const globalTotal = droppedPaths.length + pastedImagesPrecount + (willGenerateCover ? 1 : 0);
+      const willGenerateBackdrop = form.images.length > 0 && !backdropRemoved && (
+        form.backdropCrop !== null || backdropSourceChanged || !isEditMode || editBackdropUrl === null
+      );
+      const globalTotal = droppedPaths.length + pastedImagesPrecount + (willGenerateCover ? 1 : 0) + (willGenerateBackdrop ? 1 : 0);
 
       if (droppedPaths.length > 0) {
         setIsProcessingImages(true);
@@ -2707,7 +3063,7 @@ const MediaCreate: React.FC = () => {
       // - cover source changed (cover image changed)
       // - creation (never has cover)
       // - edit without existing cover (media with no images until now)
-      const shouldGenerateCover = form.images.length > 0 && (
+      const shouldGenerateCover = form.images.length > 0 && !coverRemoved && (
         form.coverCrop !== null ||
         coverSourceChanged ||
         !isEditMode ||
@@ -2715,7 +3071,7 @@ const MediaCreate: React.FC = () => {
       );
       if (shouldGenerateCover) {
         setIsProcessingImages(true);
-        const coverStep = globalTotal; // always the last step
+        const coverStep = globalTotal - (willGenerateBackdrop ? 1 : 0);
         setUploadProgress({
           current: coverStep,
           total: globalTotal,
@@ -2748,6 +3104,62 @@ const MediaCreate: React.FC = () => {
 
         setIsProcessingImages(false);
         setUploadProgress(null);
+      }
+
+      // Generate backdrop if:
+      // - explicit crop by user
+      // - backdrop source changed
+      // - creation (never has backdrop)
+      // - edit without existing backdrop
+      const shouldGenerateBackdrop = form.images.length > 0 && !backdropRemoved && (
+        form.backdropCrop !== null ||
+        backdropSourceChanged ||
+        !isEditMode ||
+        editBackdropUrl === null
+      );
+      if (shouldGenerateBackdrop) {
+        setIsProcessingImages(true);
+        setUploadProgress({
+          current: globalTotal,
+          total: globalTotal,
+          fileName: 'Backdrop',
+          stage: 'processing',
+          percent: 50,
+        });
+
+        try {
+          const crop = form.backdropCrop ?? { x: 0, y: 0, zoom: 1 };
+          await tauriApi.media.setBackdrop(
+            targetMediaId!,
+            crop.x,
+            crop.y,
+            crop.zoom,
+            backdropImageIndex,
+          );
+          setUploadProgress({
+            current: globalTotal,
+            total: globalTotal,
+            fileName: 'Backdrop',
+            stage: 'done',
+            percent: 100,
+          });
+          await new Promise(r => setTimeout(r, 400));
+        } catch (backdropErr) {
+          console.error('Failed to set backdrop:', backdropErr);
+        }
+
+        setIsProcessingImages(false);
+        setUploadProgress(null);
+      }
+
+      // Safety net: if user explicitly removed cover/backdrop in edit mode, ensure cleared
+      if (isEditMode && editingMediaId) {
+        if (coverRemoved) {
+          try { await tauriApi.media.clearCover(editingMediaId); } catch (e) { console.error('Failed to clear cover on save:', e); }
+        }
+        if (backdropRemoved) {
+          try { await tauriApi.media.clearBackdrop(editingMediaId); } catch (e) { console.error('Failed to clear backdrop on save:', e); }
+        }
       }
 
       // Invalidate queries so other pages see fresh data
@@ -2794,6 +3206,11 @@ const MediaCreate: React.FC = () => {
 
   // Cover image is determined by coverImageIndex, not position
   const coverImage = form.images.length > 0 ? (form.images[coverImageIndex] ?? form.images[0]) : null;
+  // Backdrop image is determined by backdropImageIndex, not position
+  const backdropImage = form.images.length > 0 ? (form.images[backdropImageIndex] ?? form.images[0]) : null;
+
+  // Whether a backdrop preview is available (for page-level background + text shadows)
+  const hasBackdrop = !!backdropImage && !backdropRemoved;
 
   // Bullet-list textarea handler for positive/negative points
   const handleBulletKeyDown = useCallback((
@@ -2883,51 +3300,94 @@ const MediaCreate: React.FC = () => {
 
   return (
     <AppShell className="select-text">
-      <SharedHeader activePage="library" />
+      <MainContent useContainer={false} className="!p-0 overflow-x-hidden">
 
-      <MainContent>
-        {/* Top bar: back + actions */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={goBack}
-              className="flex items-center justify-center w-9 h-9 rounded-xl bg-white/5 border border-white/10 text-text-secondary hover:bg-white/10 hover:text-white transition-all cursor-pointer"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-            <h1 className="text-lg font-bold text-white">
-              {editingMediaId ? t('mediaCreate.editMedia') : t('mediaCreate.newMedia')}
-            </h1>
+        {/* ── Page wrapper ── */}
+        <div className="relative min-h-full">
+          {/* Backdrop — page-level background, like MediaDetail */}
+          <MediaCreateBackdrop
+            src={
+              backdropImage && !backdropRemoved
+                ? (editBackdropUrl && !form.backdropCrop ? editBackdropUrl : backdropImage.preview)
+                : null
+            }
+            cropData={form.backdropCrop}
+            useEditUrl={!!editBackdropUrl && !form.backdropCrop}
+            removed={backdropRemoved}
+          />
+
+          {/* Overlay header — transparent so backdrop shows through */}
+          <div className="absolute top-0 left-0 w-[calc(100%+6px)] z-30">
+            <SharedHeader activePage="library" transparent />
           </div>
 
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={goBack}
-              disabled={isSubmitting || createMutation.isPending || updateMutation.isPending || isProcessingImages}
-              className="px-5 py-2 text-sm text-text-secondary hover:text-white border border-white/10 rounded-xl hover:bg-white/5 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {t('common.cancel')}
-            </button>
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={isSubmitting || createMutation.isPending || updateMutation.isPending || isProcessingImages}
-              data-tutorial="media-save-btn"
-              className="flex items-center gap-2 px-5 py-2 bg-primary hover:bg-primary-dark rounded-xl text-sm font-semibold text-white shadow-[0_0_15px_rgba(217,70,239,0.25)] hover:shadow-[0_0_20px_rgba(217,70,239,0.4)] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting || createMutation.isPending || updateMutation.isPending || isProcessingImages ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <Save className="w-4 h-4" />
-              )}
-              {isProcessingImages || isSubmitting
-                ? (editingMediaId ? t('common.saving') : t('common.creating'))
-                : editingMediaId ? t('mediaCreate.save') : t('common.create')}
-            </button>
+          {/* Content — starts at pt-[80px] (after the transparent header) */}
+          <div className="relative z-10 px-10 pr-[34px] pt-[80px] pb-6 md:pb-8">
+
+          {/* Top bar: back + actions */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={goBack}
+                className="flex items-center justify-center w-9 h-9 rounded-xl bg-white/5 border border-white/10 text-text-secondary hover:bg-white/10 hover:text-white transition-all cursor-pointer"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+              <h1 className="text-lg font-bold text-white" style={{ textShadow: hasBackdrop ? '0 1px 3px rgba(0,0,0,0.85)' : undefined }}>
+                {editingMediaId ? t('mediaCreate.editMedia') : t('mediaCreate.newMedia')}
+              </h1>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={goBack}
+                disabled={isSubmitting || createMutation.isPending || updateMutation.isPending || isProcessingImages}
+                className="flex items-center justify-center px-5 h-[40px] rounded-xl text-sm font-semibold text-white/90 bg-[#15172b]/80 hover:bg-[#1e2035]/90 border border-white/[0.09] hover:border-white/20 backdrop-blur-md transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={isSubmitting || createMutation.isPending || updateMutation.isPending || isProcessingImages}
+                data-tutorial="media-save-btn"
+                className="flex items-center gap-2 px-5 h-[40px] rounded-xl bg-primary/20 hover:bg-primary/30 border border-primary/30 text-sm font-semibold text-white transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting || createMutation.isPending || updateMutation.isPending || isProcessingImages ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                {isProcessingImages || isSubmitting
+                  ? (editingMediaId ? t('common.saving') : t('common.creating'))
+                  : editingMediaId ? t('mediaCreate.save') : t('common.create')}
+              </button>
+            </div>
           </div>
-        </div>
+
+        {/* ============================================================ */}
+        {/*  Hero preview — foreground content on top of backdrop         */}
+        {/* ============================================================ */}
+        <MediaCreateHero
+          title={form.title}
+          collection={selectedCollection}
+          creator={form.creator}
+          releaseDate={form.releaseDate}
+          progressTotal={form.progressTotal}
+          mediaStatus={form.mediaStatus}
+          synopsis={form.synopsis}
+          coverSrc={
+            coverImage && !coverRemoved
+              ? (editCoverUrl && !form.coverCrop ? editCoverUrl : coverImage.preview)
+              : null
+          }
+          coverCrop={form.coverCrop}
+          coverUseEditUrl={!!editCoverUrl && !form.coverCrop}
+          coverRemoved={coverRemoved}
+          hasBackdrop={hasBackdrop}
+        />
 
         {/* ============================================================ */}
         {/*  Two-column layout                                            */}
@@ -2936,45 +3396,11 @@ const MediaCreate: React.FC = () => {
 
           {/* LEFT COLUMN — Info + Note & Avis (2/3) */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="glass-card rounded-2xl p-6 relative z-10">
-              <SectionHeader icon={Info} title={t('mediaCreate.generalInfo')} color="#3b82f6" />
+            <div className="glass-card rounded-2xl p-5 relative z-10">
+              <SharedSectionHeader title={t('mediaCreate.generalInfo')} />
 
-              <div className="flex gap-6">
-                {/* Cover image area */}
-                <div className={`shrink-0 ${coverLocked ? 'pointer-events-none opacity-60' : ''}`} data-tutorial="media-cover">
-                  <div
-                    className="w-[140px] aspect-[2/3] rounded-xl overflow-hidden border border-white/10 bg-white/5 relative group cursor-pointer"
-                    onClick={() => { if (coverImage) setShowCoverCrop(true); }}
-                  >
-                    {coverImage ? (
-                      <>
-                        <div className="w-full h-full overflow-hidden relative">
-                          {/* Show cropped cover from server if available and no new crop set */}
-                          {editCoverUrl && !form.coverCrop ? (
-                            <img src={editCoverUrl} alt="" className="w-full h-full object-cover select-none pointer-events-none" />
-                          ) : (
-                            <CoverPreviewImg
-                              src={coverImage.preview}
-                              cropData={form.coverCrop}
-                              containerW={140}
-                            />
-                          )}
-                        </div>
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <span className="text-[10px] font-semibold text-white">{t('mediaCreate.crop')}</span>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-white/20">
-                        <ImageIcon className="w-8 h-8" />
-                        <span className="text-[10px] font-medium text-center px-2 leading-tight">{t('mediaCreate.firstImageIsCover')}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Fields */}
-                <div className="flex-1 space-y-4 min-w-0">
+              {/* Cover & backdrop are managed in the gallery panel below — preview lives in the hero above */}
+              <div className="space-y-4 min-w-0">
                   {/* Collection — inline dropdown */}
                   <div ref={collectionDropdownRef} className="relative" data-tutorial="media-collection-dropdown">
                     <label className="block text-[11px] font-semibold text-white/40 uppercase tracking-wider mb-1.5">{t('common.collection')} <span className="text-red-400">*</span></label>
@@ -3125,34 +3551,43 @@ const MediaCreate: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Duration / Detail info - Display only */}
-                  <div>
-                    <label className="block text-[11px] font-semibold text-white/40 uppercase tracking-wider mb-1.5">
-                      {selectedCollection?.duration_label || 'Total'}
-                    </label>
-                    <div className="px-3 py-2.5 bg-white/[0.02] border border-white/5 rounded-xl text-sm text-white/60">
-                      {(() => {
-                        const progressionLabel = selectedCollection?.progression_label || 'Episode';
-                        const pluralWithS = selectedCollection?.plural_with_s ?? false;
-                        if (form.progressTotal && form.progressTotal > 0) {
-                          return formatProgression(form.progressTotal, progressionLabel, pluralWithS);
-                        }
-                        return '—';
-                      })()}
+                  {/* Duration / Detail info + Web link */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-white/40 uppercase tracking-wider mb-1.5">
+                        {selectedCollection?.duration_label || 'Total'}
+                      </label>
+                      <div className="px-3 py-2.5 bg-white/[0.02] border border-white/5 rounded-xl text-sm text-white/60 h-[46px] flex items-center">
+                        {(() => {
+                          const progressionLabel = selectedCollection?.progression_label || 'Episode';
+                          const pluralWithS = selectedCollection?.plural_with_s ?? false;
+                          if (form.progressTotal && form.progressTotal > 0) {
+                            return formatProgression(form.progressTotal, progressionLabel, pluralWithS);
+                          }
+                          return '—';
+                        })()}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-white/40 uppercase tracking-wider mb-1.5">
+                        {t('mediaCreate.webLink')}
+                      </label>
+                      <input
+                        type="url"
+                        value={form.externalUrl}
+                        onChange={(e) => updateField('externalUrl', e.target.value)}
+                        placeholder="https://…"
+                        className="w-full h-[46px] px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-primary/30 transition-colors"
+                      />
                     </div>
                   </div>
                 </div>
-              </div>
             </div>
 
             {/* Crédits — LEFT COLUMN (2/3) */}
-            <div className="glass-card rounded-2xl p-6 relative z-[2] mb-6" data-tutorial="media-credits">
-              <div className="flex items-center gap-2.5 mb-5 pb-3 border-b border-white/5">
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#a78bfa20' }}>
-                  <Users className="w-3.5 h-3.5" style={{ color: '#a78bfa' }} />
-                </div>
-                <h2 className="text-base font-bold text-white">{i18next.t('common.credits')}</h2>
-              </div>
+            <div className="glass-card rounded-2xl p-5 relative z-[2]" data-tutorial="media-credits">
+              <SharedSectionHeader title={i18next.t('common.credits')} />
               <CreditsSelector
                 selectedCredits={form.credits}
                 allPeople={people}
@@ -3162,55 +3597,52 @@ const MediaCreate: React.FC = () => {
             </div>
 
             {/* Avis — LEFT COLUMN (2/3) */}
-            <div className={`glass-card rounded-2xl p-6 relative z-[1] ${reviewLocked ? 'pointer-events-none opacity-60' : ''}`} data-tutorial="media-review">
-              <div className="flex items-center justify-between mb-5 pb-3 border-b border-white/5">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#ec489920' }}>
-                    <PenLine className="w-3.5 h-3.5" style={{ color: '#ec4899' }} />
+            <div className={`glass-card rounded-2xl p-5 relative z-[1] ${reviewLocked ? 'pointer-events-none opacity-60' : ''}`} data-tutorial="media-review">
+              <SharedSectionHeader
+                title={t('mediaCreate.review')}
+                extra={
+                  /* Template picker */
+                  <div ref={templateMenuRef} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowTemplateMenu((v) => !v)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 text-[11px] font-semibold text-white/40 hover:text-white/70 transition-all cursor-pointer"
+                    >
+                      <Zap className="w-3 h-3" />
+                      {i18next.t('templateManagement.template_one')}
+                      <ChevronDown className={`w-3 h-3 transition-transform ${showTemplateMenu ? 'rotate-180' : ''}`} />
+                    </button>
+                    {showTemplateMenu && (
+                      <div className="absolute z-50 right-0 top-full mt-1.5 bg-[#12141f]/98 backdrop-blur-2xl border border-white/10 rounded-xl shadow-2xl p-1.5 min-w-[190px]">
+                        <p className="px-2.5 py-1 text-[10px] font-semibold text-white/25 uppercase tracking-wider">{i18next.t('mediaCreate.insertTemplate')}</p>
+                        {reviewTemplates && reviewTemplates.length > 0 ? (
+                          reviewTemplates.map((tpl) => {
+                            const TemplateIcon = getIconById(tpl.icon);
+                            return (
+                              <button
+                                key={tpl.id}
+                                type="button"
+                                onClick={() => {
+                                  const filled = tpl.content.replace('{titre}', form.title || 'Titre');
+                                  reviewEditorRef.current?.setContent(filled);
+                                  updateField('userReview', filled);
+                                  setShowTemplateMenu(false);
+                                }}
+                                className="w-full text-left flex items-center gap-2.5 px-2.5 py-2 text-xs text-white/60 hover:text-white hover:bg-white/8 rounded-lg transition-colors cursor-pointer"
+                              >
+                                <TemplateIcon className="w-4 h-4" style={{ color: tpl.color }} />
+                                {tpl.name}
+                              </button>
+                            );
+                          })
+                        ) : (
+                          <p className="px-2.5 py-2 text-xs text-white/30">{i18next.t('mediaCreate.noTemplate')}</p>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <h2 className="text-base font-bold text-white">{t('mediaCreate.review')}</h2>
-                </div>
-                {/* Template picker */}
-                <div ref={templateMenuRef} className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setShowTemplateMenu((v) => !v)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 text-[11px] font-semibold text-white/40 hover:text-white/70 transition-all cursor-pointer"
-                  >
-                    <Zap className="w-3 h-3" />
-                    {i18next.t('templateManagement.template_one')}
-                    <ChevronDown className={`w-3 h-3 transition-transform ${showTemplateMenu ? 'rotate-180' : ''}`} />
-                  </button>
-                  {showTemplateMenu && (
-                    <div className="absolute z-50 right-0 top-full mt-1.5 bg-[#12141f]/98 backdrop-blur-2xl border border-white/10 rounded-xl shadow-2xl p-1.5 min-w-[190px]">
-                      <p className="px-2.5 py-1 text-[10px] font-semibold text-white/25 uppercase tracking-wider">{i18next.t('mediaCreate.insertTemplate')}</p>
-                      {reviewTemplates && reviewTemplates.length > 0 ? (
-                        reviewTemplates.map((tpl) => {
-                          const TemplateIcon = getIconById(tpl.icon);
-                          return (
-                            <button
-                              key={tpl.id}
-                              type="button"
-                              onClick={() => {
-                                const filled = tpl.content.replace('{titre}', form.title || 'Titre');
-                                reviewEditorRef.current?.setContent(filled);
-                                updateField('userReview', filled);
-                                setShowTemplateMenu(false);
-                              }}
-                              className="w-full text-left flex items-center gap-2.5 px-2.5 py-2 text-xs text-white/60 hover:text-white hover:bg-white/8 rounded-lg transition-colors cursor-pointer"
-                            >
-                              <TemplateIcon className="w-4 h-4" style={{ color: tpl.color }} />
-                              {tpl.name}
-                            </button>
-                          );
-                        })
-                      ) : (
-                        <p className="px-2.5 py-2 text-xs text-white/30">{i18next.t('mediaCreate.noTemplate')}</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
+                }
+              />
               <div className="rounded-xl overflow-hidden border border-white/10 focus-within:border-primary/30 transition-colors">
                 <GravityMarkdownEditor
                   ref={reviewEditorRef}
@@ -3226,25 +3658,22 @@ const MediaCreate: React.FC = () => {
             {/* ============================================================ */}
             <div
               ref={attachmentDropZoneRef}
-              className={`glass-card rounded-2xl p-6 transition-all ${isAttachmentDragOver ? 'ring-2 ring-green-500/50 bg-green-500/[0.03]' : ''} ${attachmentsLocked ? 'pointer-events-none opacity-60' : ''}`}
+              className={`glass-card rounded-2xl p-5 transition-all ${isAttachmentDragOver ? 'ring-2 ring-green-500/50 bg-green-500/[0.03]' : ''} ${attachmentsLocked ? 'pointer-events-none opacity-60' : ''}`}
               data-tutorial="media-attachments"
             >
-              <div className="flex items-center justify-between mb-5 pb-3 border-b border-white/5">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#22c55e20' }}>
-                    <Paperclip className="w-3.5 h-3.5" style={{ color: '#22c55e' }} />
-                  </div>
-                  <h2 className="text-base font-bold text-white">{i18next.t('common.attachments')}</h2>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleAttachmentPicker}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs font-semibold text-white/60 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  {i18next.t('common.add')}
-                </button>
-              </div>
+              <SharedSectionHeader
+                title={i18next.t('common.attachments')}
+                extra={
+                  <button
+                    type="button"
+                    onClick={handleAttachmentPicker}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs font-semibold text-white/60 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    {i18next.t('common.add')}
+                  </button>
+                }
+              />
 
               {form.attachments.length > 0 ? (
                 <>
@@ -3287,16 +3716,11 @@ const MediaCreate: React.FC = () => {
           {/* RIGHT COLUMN — Genres + Progression + Rating & Review (1/3) */}
           <div className="space-y-6">
             {/* Genres card - MOVED TO TOP */}
-            <div className={`glass-card rounded-2xl p-6 relative z-30 ${genresLocked ? 'pointer-events-none opacity-60' : ''}`} data-tutorial="media-genres">
-              <div className="flex items-center justify-between mb-5 pb-3 border-b border-white/5">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#8b5cf620' }}>
-                    <Tag className="w-3.5 h-3.5" style={{ color: '#8b5cf6' }} />
-                  </div>
-                  <h2 className="text-base font-bold text-white">{i18next.t('common.genres')}</h2>
-                </div>
-                <span className="text-[11px] font-semibold text-white/30 tabular-nums">{form.genres.length}/{MAX_GENRES_PER_MEDIA}</span>
-              </div>
+            <div className={`glass-card rounded-2xl p-5 relative z-30 ${genresLocked ? 'pointer-events-none opacity-60' : ''}`} data-tutorial="media-genres">
+              <SharedSectionHeader
+                title={i18next.t('common.genres')}
+                extra={<span className="text-[11px] font-semibold text-white/30 tabular-nums">{form.genres.length}/{MAX_GENRES_PER_MEDIA}</span>}
+              />
               <GenreSelector
                 selectedGenres={form.genres}
                 onAdd={(genre) => {
@@ -3323,8 +3747,8 @@ const MediaCreate: React.FC = () => {
             </div>
 
             {/* Progress card */}
-            <div className={`glass-card rounded-2xl p-6 relative z-20 ${progressLocked ? 'pointer-events-none opacity-60' : ''}`} data-tutorial="media-progress">
-              <SectionHeader icon={Zap} title={i18next.t('mediaCreate.progress')} color="#f59e0b" />
+            <div className={`glass-card rounded-2xl p-5 relative z-20 ${progressLocked ? 'pointer-events-none opacity-60' : ''}`} data-tutorial="media-progress">
+              <SharedSectionHeader title={i18next.t('mediaCreate.progress')} />
 
               {/* Status picker */}
               <ProgressStatusPicker
@@ -3346,7 +3770,7 @@ const MediaCreate: React.FC = () => {
                     {/* Ring + inputs row */}
                     <div className="flex items-center gap-5">
                       <div className="shrink-0">
-                        <ProgressRing value={effectivePct} />
+                        <ProgressRing value={effectivePct} progressStatus={form.progressStatus} />
                       </div>
                       <div className="flex-1 grid grid-cols-2 gap-3">
                         {/* Current Progress Input */}
@@ -3646,8 +4070,8 @@ const MediaCreate: React.FC = () => {
             </div>
 
             {/* Rating & Review card */}
-            <div className={`glass-card rounded-2xl p-6 relative z-10 ${ratingLocked ? 'pointer-events-none opacity-60' : ''}`} data-tutorial="media-rating">
-              <SectionHeader icon={PenLine} title={i18next.t('mediaCreate.ratingAndReview')} color="#ec4899" />
+            <div className={`glass-card rounded-2xl p-5 relative z-10 ${ratingLocked ? 'pointer-events-none opacity-60' : ''}`} data-tutorial="media-rating">
+              <SharedSectionHeader title={i18next.t('mediaCreate.ratingAndReview')} />
 
               {/* Rating /100 with segmented bar */}
               <div className="mb-5">
@@ -3681,42 +4105,21 @@ const MediaCreate: React.FC = () => {
                   <button type="button" onClick={() => updateField('userRating', Math.min(MAX_RATING, (form.userRating ?? 0) + 1))} className="w-9 h-9 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-all cursor-pointer"><Plus className="w-4 h-4" /></button>
                 </div>
 
-                {/* Segmented bar — clickable */}
-                <div className="flex gap-0.5 mb-2">
-                  {Array.from({ length: 20 }, (_, i) => {
-                    const segMin = i * 5;
-                    const segMax = segMin + 5;
-                    const rating = form.userRating ?? 0;
-                    const filled = rating >= segMax;
-                    const partial = !filled && rating > segMin;
-                    const fillPct = partial ? ((rating - segMin) / 5) * 100 : filled ? 100 : 0;
-                    const segColor = getRatingColor(segMin + 2.5);
-                    return (
-                      <div
-                        key={i}
-                        className="flex-1 rounded-sm overflow-hidden relative cursor-pointer group"
-                        style={{ height: 8, backgroundColor: 'rgba(255,255,255,0.06)' }}
-                        onClick={() => updateField('userRating', segMax)}
-                        title={`${segMin}–${segMax - 1} · ${getRatingCategory(segMin + 2.5)}`}
-                      >
-                        {fillPct > 0 && (
-                          <div
-                            className="absolute inset-y-0 left-0 rounded-sm transition-all duration-300"
-                            style={{
-                              width: `${fillPct}%`,
-                              backgroundColor: segColor,
-                              boxShadow: filled ? `0 0 4px ${segColor}55` : undefined,
-                            }}
-                          />
-                        )}
-                        {/* Hover highlight on empty segments */}
-                        <div
-                          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                          style={{ backgroundColor: `${segColor}30` }}
-                        />
-                      </div>
-                    );
-                  })}
+                {/* Segmented bar — shared with MediaDetail (tooltip hover) */}
+                <div className="mb-2">
+                  <NoteSegmentedBar
+                    segments={Array.from({ length: 20 }, (_, i) => {
+                      const segMin = i * 5;
+                      const segMax = segMin + 5;
+                      const rating = form.userRating ?? 0;
+                      const filled = rating >= segMax;
+                      const partial = !filled && rating > segMin;
+                      const fillPct = partial ? ((rating - segMin) / 5) * 100 : filled ? 100 : 0;
+                      const segColor = getRatingColor(segMin + 2.5);
+                      const segCategory = getRatingCategory(segMin + 2.5);
+                      return { fillPct, segColor, filled, partial, segMin, segMax, segCategory };
+                    })}
+                  />
                 </div>
 
                 {/* Scale labels */}
@@ -3788,23 +4191,18 @@ const MediaCreate: React.FC = () => {
         {/* ============================================================ */}
         {/*  Gallery — full width                                         */}
         {/* ============================================================ */}
-        <div className={`glass-card rounded-2xl p-6 mb-6 ${galleryLocked ? 'pointer-events-none opacity-60' : ''}`} data-tutorial="media-gallery">
-          <div className="flex items-center justify-between mb-5 pb-3 border-b border-white/5">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#06b6d420' }}>
-                <ImageIcon className="w-3.5 h-3.5" style={{ color: '#06b6d4' }} />
-              </div>
-              <h2 className="text-base font-bold text-white">{i18next.t('mediaCreate.gallery')}</h2>
-            </div>
-            <span className="text-[11px] font-semibold text-white/30 tabular-nums">{form.images.length}/{MAX_IMAGES_PER_MEDIA}</span>
-          </div>
+        <div className={`glass-card rounded-2xl p-5 mb-6 ${galleryLocked ? 'pointer-events-none opacity-60' : ''}`} data-tutorial="media-gallery">
+          <SharedSectionHeader
+            title={i18next.t('mediaCreate.gallery')}
+            extra={<span className="text-[11px] font-semibold text-white/30 tabular-nums">{form.images.length}/{MAX_IMAGES_PER_MEDIA}</span>}
+          />
 
-          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+          <div className="flex flex-wrap gap-3 items-start">
             {form.images.length > 0 && (
               <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
                 <SortableContext items={form.images.map((i) => i.id)} strategy={rectSortingStrategy}>
                   {form.images.map((image, index) => (
-                    <SortableGalleryImage key={image.id} image={image} index={index} isCover={index === coverImageIndex} onRemove={handleRemoveImage} onSetCover={(idx) => { setCoverImageIndex(idx); updateField('coverCrop', null); setEditCoverUrl(null); setCoverSourceChanged(true); }} />
+                    <SortableGalleryImage key={image.id} image={image} index={index} onRemove={handleRemoveImage} />
                   ))}
                 </SortableContext>
               </DndContext>
@@ -3819,8 +4217,9 @@ const MediaCreate: React.FC = () => {
                 onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(false); }}
                 onDrop={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(false); if (e.dataTransfer.files?.length) { const files = Array.from(e.dataTransfer.files).slice(0, MAX_IMAGES_PER_MEDIA - form.images.length); const newImages: GalleryImage[] = files.map((file) => ({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`, file, preview: URL.createObjectURL(file) })); setForm((prev) => ({ ...prev, images: [...prev.images, ...newImages] })); } }}
                 onClick={handleFilePicker}
-                className={`aspect-[3/4] rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all cursor-pointer ${isDragOver ? 'border-primary/60 bg-primary/10' : 'border-white/10 bg-white/[0.02] hover:border-white/25 hover:bg-white/5'
+                className={`h-40 rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all cursor-pointer ${isDragOver ? 'border-primary/60 bg-primary/10' : 'border-white/10 bg-white/[0.02] hover:border-white/25 hover:bg-white/5'
                   }`}
+                style={{ aspectRatio: 3 / 4 }}
               >
                 <Upload className={`w-5 h-5 ${isDragOver ? 'text-primary' : 'text-white/20'}`} />
                 <span className="text-[10px] text-white/30 text-center px-2 flex flex-col items-center gap-0.5">
@@ -3833,10 +4232,32 @@ const MediaCreate: React.FC = () => {
 
           {form.images.length > 0 && (
             <p className="text-[11px] text-white/25 mt-3">
-              {form.images.length} {i18next.t('common.image', { count: form.images.length })} — {i18next.t('mediaCreate.firstIsCover')}
+              {form.images.length} {i18next.t('common.image', { count: form.images.length })} — {i18next.t('mediaCreate.galleryHint')}
             </p>
           )}
+
+          {/* Unified Cover & Backdrop management panel */}
+          <CoverBackdropPanel
+            images={form.images}
+            coverImageIndex={coverImageIndex}
+            backdropImageIndex={backdropImageIndex}
+            coverCrop={form.coverCrop}
+            backdropCrop={form.backdropCrop}
+            editCoverUrl={editCoverUrl}
+            editBackdropUrl={editBackdropUrl}
+            coverRemoved={coverRemoved}
+            backdropRemoved={backdropRemoved}
+            onSelectCoverSource={handleSelectCoverSource}
+            onSelectBackdropSource={handleSelectBackdropSource}
+            onCropCover={() => { if (coverImage) setShowCoverCrop(true); }}
+            onCropBackdrop={() => { if (backdropImage) setShowBackdropCrop(true); }}
+            onRemoveCover={handleRemoveCover}
+            onRemoveBackdrop={handleRemoveBackdrop}
+          />
         </div>
+
+          </div>{/* end content div (px-10 pr-[34px] pt-[76px]) */}
+        </div>{/* end page wrapper (relative min-h-full) */}
 
       </MainContent>
 
@@ -3891,9 +4312,27 @@ const MediaCreate: React.FC = () => {
           initialCrop={form.coverCrop ?? undefined}
           onConfirm={(cropData) => {
             updateField('coverCrop', cropData);
+            setCoverRemoved(false);
             setShowCoverCrop(false);
           }}
           onCancel={() => setShowCoverCrop(false)}
+        />
+      )}
+
+      {/* Backdrop crop modal */}
+      {showBackdropCrop && backdropImage && (
+        <CoverCropModal
+          imageDataUrl={backdropImage.preview}
+          initialCrop={form.backdropCrop ?? undefined}
+          previewWidth={320}
+          previewHeight={180}
+          titleKey="mediaCreate.cropBackdropTitle"
+          onConfirm={(cropData) => {
+            updateField('backdropCrop', cropData);
+            setBackdropRemoved(false);
+            setShowBackdropCrop(false);
+          }}
+          onCancel={() => setShowBackdropCrop(false)}
         />
       )}
 

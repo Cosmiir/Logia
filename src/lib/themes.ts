@@ -7,6 +7,7 @@ export interface Theme {
   accentRgb: string;       // Valeurs RGB de l'accent pour les opacités (ex: "217,70,239")
   cardBg: string;          // Fond des glass-cards
   cardBorder: string;      // Bordure des glass-cards
+  solidBg: string;         // Couleur solide la plus foncée (ou claire pour arctic) pour le fondu du backdrop
   isDark: boolean;         // true pour les thèmes sombres, false pour les thèmes clairs
 }
 
@@ -20,6 +21,7 @@ export const THEMES: Theme[] = [
     accentRgb: '168,85,247',
     cardBg: 'rgba(255,255,255,0.04)',
     cardBorder: 'rgba(255,255,255,0.08)',
+    solidBg: '#0a1628',
     isDark: true,
   },
   {
@@ -31,6 +33,7 @@ export const THEMES: Theme[] = [
     accentRgb: '59,130,246',
     cardBg: 'rgba(255,255,255,0.04)',
     cardBorder: 'rgba(255,255,255,0.08)',
+    solidBg: '#0a0d1f',
     isDark: true,
   },
   {
@@ -42,6 +45,7 @@ export const THEMES: Theme[] = [
     accentRgb: '249,115,22',
     cardBg: 'rgba(255,255,255,0.04)',
     cardBorder: 'rgba(255,180,100,0.08)',
+    solidBg: '#120800',
     isDark: true,
   },
   {
@@ -53,6 +57,7 @@ export const THEMES: Theme[] = [
     accentRgb: '16,185,129',
     cardBg: 'rgba(255,255,255,0.04)',
     cardBorder: 'rgba(100,255,150,0.08)',
+    solidBg: '#010d05',
     isDark: true,
   },
   {
@@ -64,6 +69,7 @@ export const THEMES: Theme[] = [
     accentRgb: '8,145,178',
     cardBg: 'rgba(0,0,0,0.04)',
     cardBorder: 'rgba(0,0,0,0.08)',
+    solidBg: '#e8f0f8',
     isDark: false,
   },
 ];

@@ -368,6 +368,14 @@ export const mediaApi = {
     return invoke('clear_media_cover', { mediaId });
   },
 
+  async setBackdrop(mediaId: number, panX: number, panY: number, zoom: number, sourceImageIndex?: number): Promise<string> {
+    return invoke('set_media_backdrop', { mediaId, panX, panY, zoom, sourceImageIndex: sourceImageIndex ?? null });
+  },
+
+  async clearBackdrop(mediaId: number): Promise<void> {
+    return invoke('clear_media_backdrop', { mediaId });
+  },
+
   async updateImagePositions(updates: Array<[number, number]>): Promise<void> {
     return invoke('update_image_positions', { updates });
   },
@@ -741,6 +749,10 @@ export const apiEnrichmentApi = {
   async downloadImage(url: string, mediaId: number): Promise<{ imageId: number }> {
     const result = await invoke<Record<string, unknown>>('download_api_image_to_media', { url, mediaId });
     return { imageId: Number(result.imageId) };
+  },
+
+  async fetchImageB64(url: string): Promise<string | null> {
+    return invoke<string | null>('fetch_image_b64', { url });
   },
 };
 

@@ -7,6 +7,9 @@ pub mod rawg;
 pub mod igdb;
 pub mod musicbrainz;
 pub mod itunes;
+pub mod google_books;
+pub mod openlibrary;
+pub mod bgg;
 
 use crate::api::types::{ApiSearchResult, ApiMediaDetail};
 use crate::api::rate_limiter::{user_agent, RateLimiter};
@@ -67,6 +70,9 @@ pub async fn search(
         "igdb" => igdb::search(query, api_key, rate_limiter).await,
         "musicbrainz" => musicbrainz::search(query, api_key, rate_limiter).await,
         "itunes" => itunes::search(query, api_key, rate_limiter).await,
+        "google_books" => google_books::search(query, api_key, rate_limiter).await,
+        "openlibrary" => openlibrary::search(query, api_key, rate_limiter).await,
+        "bgg" => bgg::search(query, api_key, rate_limiter).await,
         _ => Err(format!("Unknown provider: {}", provider)),
     }
 }
@@ -90,6 +96,9 @@ pub async fn get_detail(
         "igdb" => igdb::get_detail(id, api_key, rate_limiter).await,
         "musicbrainz" => musicbrainz::get_detail(id, api_key, rate_limiter).await,
         "itunes" => itunes::get_detail(id, api_key, rate_limiter).await,
+        "google_books" => google_books::get_detail(id, api_key, rate_limiter).await,
+        "openlibrary" => openlibrary::get_detail(id, api_key, rate_limiter).await,
+        "bgg" => bgg::get_detail(id, api_key, rate_limiter).await,
         _ => Err(format!("Unknown provider: {}", provider)),
     }
 }

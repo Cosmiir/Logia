@@ -2,8 +2,8 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ZoomIn, ZoomOut, Move } from 'lucide-react';
 
-const PREVIEW_W = 200;
-const PREVIEW_H = 300; // 2:3 aspect ratio
+const DEFAULT_PREVIEW_W = 200;
+const DEFAULT_PREVIEW_H = 300; // 2:3 aspect ratio (cover)
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 5;
 const WHEEL_STEP = 0.1;
@@ -13,9 +13,23 @@ interface CoverCropModalProps {
   onConfirm: (cropData: { x: number; y: number; zoom: number }) => void;
   onCancel: () => void;
   initialCrop?: { x: number; y: number; zoom: number };
+  /** Preview frame width in px (default 200, cover) */
+  previewWidth?: number;
+  /** Preview frame height in px (default 300, cover) */
+  previewHeight?: number;
+  /** Modal title i18n key (default mediaCreate.cropCover) */
+  titleKey?: string;
 }
 
-const CoverCropModal: React.FC<CoverCropModalProps> = ({ imageDataUrl, onConfirm, onCancel, initialCrop }) => {
+const CoverCropModal: React.FC<CoverCropModalProps> = ({
+  imageDataUrl,
+  onConfirm,
+  onCancel,
+  initialCrop,
+  previewWidth = DEFAULT_PREVIEW_W,
+  previewHeight = DEFAULT_PREVIEW_H,
+  titleKey = 'mediaCreate.cropCover',
+}) => {
   const { t } = useTranslation();
   const [zoom, setZoom] = useState(initialCrop?.zoom ?? 1);
   const [pan, setPan] = useState({ x: initialCrop?.x ?? 0, y: initialCrop?.y ?? 0 });
@@ -34,10 +48,10 @@ const CoverCropModal: React.FC<CoverCropModalProps> = ({ imageDataUrl, onConfirm
   // At zoom=1 the image fills the frame entirely (like object-fit: cover).
   const getCoverScale = useCallback(() => {
     if (!natSize) return 1;
-    const scaleX = PREVIEW_W / natSize.w;
-    const scaleY = PREVIEW_H / natSize.h;
+    const scaleX = previewWidth / natSize.w;
+    const scaleY = previewHeight / natSize.h;
     return Math.max(scaleX, scaleY);
-  }, [natSize]);
+  }, [natSize, previewWidth, previewHeight]);
 
   const onMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -91,14 +105,14 @@ const CoverCropModal: React.FC<CoverCropModalProps> = ({ imageDataUrl, onConfirm
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm">
-      <div className="bg-[#0e1025] border border-white/10 rounded-2xl p-6 w-[360px] flex flex-col items-center gap-5 shadow-2xl">
-        <h3 className="text-sm font-bold text-white uppercase tracking-wider">{t('mediaCreate.cropCover')}</h3>
+      <div className="bg-[#0e1025] border border-white/10 rounded-2xl p-6 flex flex-col items-center gap-5 shadow-2xl" style={{ width: Math.max(360, previewWidth + 80) }}>
+        <h3 className="text-sm font-bold text-white uppercase tracking-wider">{t(titleKey)}</h3>
 
-        {/* Preview frame — 2:3 aspect ratio */}
+        {/* Preview frame */}
         <div
           ref={frameRef}
           className="relative rounded-xl overflow-hidden border-2 border-white/20 cursor-move bg-black/40"
-          style={{ width: PREVIEW_W, height: PREVIEW_H }}
+          style={{ width: previewWidth, height: previewHeight }}
           onMouseDown={onMouseDown}
         >
           {natSize && (

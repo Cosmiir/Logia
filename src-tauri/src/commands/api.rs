@@ -164,3 +164,11 @@ pub async fn download_api_image_to_media(
     result.insert("imageId".to_string(), serde_json::Value::from(image_id));
     Ok(result)
 }
+
+/// Download an image from a URL and return it as base64-encoded data.
+/// Used by the frontend to fetch actor/credit photos from provider APIs
+/// (e.g. TMDB profile_path) before saving them as person photos.
+#[tauri::command]
+pub async fn fetch_image_b64(url: String) -> Result<Option<String>, String> {
+    Ok(providers::fetch_image_as_b64(&url).await)
+}

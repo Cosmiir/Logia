@@ -108,6 +108,30 @@ const PROVIDERS: &[ProviderMeta] = &[
         key_setting: None,
         doc_url: "https://performance-partners.apple.com/search-api",
     },
+    ProviderMeta {
+        id: "google_books",
+        label: "Google Books",
+        media_type: "book",
+        needs_key: true,
+        key_setting: Some("api_key_google_books"),
+        doc_url: "https://developers.google.com/books/docs/v1/using",
+    },
+    ProviderMeta {
+        id: "openlibrary",
+        label: "Open Library",
+        media_type: "book",
+        needs_key: false,
+        key_setting: None,
+        doc_url: "https://openlibrary.org/developers/api",
+    },
+    ProviderMeta {
+        id: "bgg",
+        label: "BoardGameGeek",
+        media_type: "board_game",
+        needs_key: true,
+        key_setting: Some("api_key_bgg"),
+        doc_url: "https://boardgamegeek.com/applications",
+    },
 ];
 
 /// Build the list of available providers, marking each as available or

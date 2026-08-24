@@ -2480,7 +2480,7 @@ const Library: React.FC = () => {
             <button
               onClick={() => navigateToMediaCreate(selectedCollectionId)}
               data-tutorial="library-new-media-btn"
-              className="flex items-center gap-2 px-4 py-2.5 bg-primary/20 border border-primary/40 rounded-xl text-sm font-semibold text-white hover:bg-primary/30 hover:border-primary/60 hover:shadow-[0_0_15px_rgba(217,70,239,0.2)] transition-all cursor-pointer"
+              className="flex items-center gap-2 px-4 h-[40px] bg-primary/20 border border-primary/30 rounded-xl text-sm font-semibold text-white hover:bg-primary/30 transition-colors cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               {t('library.new')}

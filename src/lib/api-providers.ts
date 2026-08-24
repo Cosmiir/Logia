@@ -3,7 +3,7 @@ import type { ProviderInfo } from '@/types';
 export interface ProviderMeta {
   id: string;
   label: string;
-  mediaType: 'movie' | 'series' | 'anime' | 'manga' | 'game' | 'music';
+  mediaType: 'movie' | 'series' | 'anime' | 'manga' | 'game' | 'music' | 'book' | 'board_game';
   needsKey: boolean;
   keySetting: string | null;
   docUrl: string;
@@ -26,6 +26,9 @@ export const PROVIDER_METADATA: ProviderMeta[] = [
   { id: 'igdb', label: 'IGDB', mediaType: 'game', needsKey: true, keySetting: 'api_key_igdb_client_id', docUrl: 'https://dev.twitch.tv/console' },
   { id: 'musicbrainz', label: 'MusicBrainz', mediaType: 'music', needsKey: false, keySetting: null, docUrl: 'https://musicbrainz.org/doc/MusicBrainz_API' },
   { id: 'itunes', label: 'iTunes', mediaType: 'music', needsKey: false, keySetting: null, docUrl: 'https://performance-partners.apple.com/search-api' },
+  { id: 'google_books', label: 'Google Books', mediaType: 'book', needsKey: true, keySetting: 'api_key_google_books', docUrl: 'https://developers.google.com/books/docs/v1/using' },
+  { id: 'openlibrary', label: 'Open Library', mediaType: 'book', needsKey: false, keySetting: null, docUrl: 'https://openlibrary.org/developers/api' },
+  { id: 'bgg', label: 'BoardGameGeek', mediaType: 'board_game', needsKey: true, keySetting: 'api_key_bgg', docUrl: 'https://boardgamegeek.com/applications' },
 ];
 
 export const MEDIA_TYPE_LABELS: Record<ProviderMeta['mediaType'], string> = {
@@ -35,6 +38,8 @@ export const MEDIA_TYPE_LABELS: Record<ProviderMeta['mediaType'], string> = {
   manga: 'manga',
   game: 'game',
   music: 'music',
+  book: 'book',
+  board_game: 'board_game',
 };
 
 /**
@@ -65,6 +70,8 @@ export const API_KEY_SETTINGS: { key: string; label: string; docUrl: string }[] 
   { key: 'api_key_rawg', label: 'RAWG', docUrl: 'https://rawg.io/apidocs' },
   { key: 'api_key_igdb_client_id', label: 'IGDB (Client ID)', docUrl: 'https://dev.twitch.tv/console' },
   { key: 'api_key_igdb_client_secret', label: 'IGDB (Client Secret)', docUrl: 'https://dev.twitch.tv/console' },
+  { key: 'api_key_google_books', label: 'Google Books', docUrl: 'https://developers.google.com/books/docs/v1/using' },
+  { key: 'api_key_bgg', label: 'BoardGameGeek', docUrl: 'https://boardgamegeek.com/applications' },
 ];
 
 /**

@@ -7,16 +7,18 @@ interface MediaCarouselProps {
   children: React.ReactNode;
   className?: string;
   isLoading?: boolean;
+  minCardWidth?: number;
+  showDots?: boolean;
 }
 
-export const MediaCarousel: React.FC<MediaCarouselProps> = ({ children, className = '', isLoading = false }) => {
+export const MediaCarousel: React.FC<MediaCarouselProps> = ({ children, className = '', isLoading = false, minCardWidth = 180, showDots = true }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const [showControls, setShowControls] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [cardWidth, setCardWidth] = useState(180);
+  const [cardWidth, setCardWidth] = useState(minCardWidth);
   const [visibleCards, setVisibleCards] = useState(4);
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isAnimatingRef = useRef(false);
@@ -26,7 +28,7 @@ export const MediaCarousel: React.FC<MediaCarouselProps> = ({ children, classNam
   useEffect(() => { animationsEnabledRef.current = animationsEnabled; }, [animationsEnabled]);
 
   const GAP = 16;
-  const MIN_CARD_WIDTH = 180;
+  const MIN_CARD_WIDTH = minCardWidth;
 
   const calculateLayout = (containerWidth: number) => {
     const maxVisible = Math.floor((containerWidth + GAP) / (MIN_CARD_WIDTH + GAP));
@@ -207,7 +209,7 @@ export const MediaCarousel: React.FC<MediaCarouselProps> = ({ children, classNam
       )}
 
       {/* Pagination dots — pill style: active dot stretches wider */}
-      {isLoading ? (
+      {showDots && (isLoading ? (
         <div className="flex justify-center gap-2 mt-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="w-2 h-2 rounded-full bg-white/10 animate-pulse" />
@@ -242,7 +244,7 @@ export const MediaCarousel: React.FC<MediaCarouselProps> = ({ children, classNam
             ))}
           </div>
         )
-      )}
+      ))}
     </div>
   );
 };

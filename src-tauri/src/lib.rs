@@ -7,15 +7,26 @@ mod api;
 use std::sync::Mutex;
 use std::path::PathBuf;
 use std::fs::OpenOptions;
+#[cfg(target_os = "windows")]
 use std::os::windows::io::AsRawHandle;
+#[cfg(unix)]
+use std::os::unix::io::AsRawFd;
 use rusqlite::Connection;
 use tauri::Manager;
 use serde::{Deserialize, Serialize};
 use tauri::RunEvent;
 
+// Windows: kernel32 LockFile/UnlockFile for cross-instance DB lock.
+#[cfg(target_os = "windows")]
 extern "C" {
     fn LockFile(handle: *mut std::ffi::c_void, offset_low: u32, offset_high: u32, length_low: u32, length_high: u32) -> i32;
     fn UnlockFile(handle: *mut std::ffi::c_void, offset_low: u32, offset_high: u32, length_low: u32, length_high: u32) -> i32;
+}
+
+// Unix: flock(2) for cross-instance DB lock. LOCK_EX | LOCK_NB = 2 | 4 = 6, LOCK_UN = 2.
+#[cfg(unix)]
+extern "C" {
+    fn flock(fd: i32, operation: i32) -> i32;
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -40,11 +51,12 @@ pub struct AppState {
     pub rate_limiter: Mutex<api::rate_limiter::RateLimiter>,
 }
 
-/// RAII guard for the database lock file. Releases the Windows file lock when dropped.
+/// RAII guard for the database lock file. Releases the file lock when dropped.
 pub struct DbLock {
     _file: std::fs::File,
 }
 
+#[cfg(target_os = "windows")]
 impl Drop for DbLock {
     fn drop(&mut self) {
         let handle = self._file.as_raw_handle() as *mut std::ffi::c_void;
@@ -52,8 +64,18 @@ impl Drop for DbLock {
     }
 }
 
+#[cfg(unix)]
+impl Drop for DbLock {
+    fn drop(&mut self) {
+        let fd = self._file.as_raw_fd();
+        // LOCK_UN = 2
+        unsafe { flock(fd, 2); }
+    }
+}
+
 /// Try to acquire an exclusive lock on a .lock file next to the DB.
 /// Returns None if another instance already holds the lock.
+#[cfg(target_os = "windows")]
 pub fn try_acquire_lock(lock_path: &PathBuf) -> Option<DbLock> {
     let file = OpenOptions::new()
         .create(true)
@@ -63,6 +85,25 @@ pub fn try_acquire_lock(lock_path: &PathBuf) -> Option<DbLock> {
     let handle = file.as_raw_handle() as *mut std::ffi::c_void;
     let success = unsafe { LockFile(handle, 0, 0, 1, 0) };
     if success != 0 {
+        Some(DbLock { _file: file })
+    } else {
+        None
+    }
+}
+
+/// Try to acquire an exclusive lock on a .lock file next to the DB.
+/// Returns None if another instance already holds the lock.
+#[cfg(unix)]
+pub fn try_acquire_lock(lock_path: &PathBuf) -> Option<DbLock> {
+    let file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .open(lock_path)
+        .ok()?;
+    let fd = file.as_raw_fd();
+    // LOCK_EX | LOCK_NB = 2 | 4 = 6. Returns 0 on success, -1 if already locked.
+    let success = unsafe { flock(fd, 6) };
+    if success == 0 {
         Some(DbLock { _file: file })
     } else {
         None
@@ -225,6 +266,8 @@ pub fn run() {
             commands::media::delete_media_image,
             commands::media::set_media_cover,
             commands::media::clear_media_cover,
+            commands::media::set_media_backdrop,
+            commands::media::clear_media_backdrop,
             commands::media::update_image_positions,
             commands::media::get_similar_media,
             commands::media::read_file_base64,
@@ -294,6 +337,7 @@ pub fn run() {
             commands::api::search_api_media,
             commands::api::get_api_media_detail,
             commands::api::download_api_image_to_media,
+            commands::api::fetch_image_b64,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

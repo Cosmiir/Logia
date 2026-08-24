@@ -255,48 +255,73 @@ pub async fn get_detail(
         })
         .unwrap_or_default();
 
-    // Images: posters + backdrops, max 8, dedup by path, priority en/null
-    let mut image_urls: Vec<String> = Vec::new();
+    // Images: posters + backdrops, fetched independently and tagged with `kind`
+    // so the frontend can auto-assign cover (poster) and backdrop.
+    // Posters use /w780 (~1080p height, under the app's 1920px storage cap).
+    // Backdrops use /original (≥1920px) since /w1280 would be upscaled to
+    // the app's 1920×1080 backdrop storage size.
+    let mut api_images: Vec<ApiImage> = Vec::new();
     if let Some(images) = body.get("images") {
+        // Posters: max 6, sorted by vote_average descending
         if let Some(posters) = images.get("posters").and_then(|p| p.as_array()) {
-            for p in posters.iter() {
+            let mut sorted_posters: Vec<&serde_json::Value> = posters.iter().collect();
+            sorted_posters.sort_by(|a, b| {
+                let va = a.get("vote_average").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                let vb = b.get("vote_average").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                vb.partial_cmp(&va).unwrap_or(std::cmp::Ordering::Equal)
+            });
+            for p in sorted_posters.iter() {
+                if api_images.len() >= 6 {
+                    break;
+                }
                 if let Some(path) = p.get("file_path").and_then(|f| f.as_str()) {
-                    let url = img_url(path, "/w500");
-                    if !image_urls.contains(&url) {
-                        image_urls.push(url);
-                    }
-                    if image_urls.len() >= 8 {
-                        break;
+                    let url = img_url(path, "/w780");
+                    if !api_images.iter().any(|i| i.url == url) {
+                        api_images.push(ApiImage {
+                            url,
+                            thumbnail_b64: None,
+                            kind: Some("poster".to_string()),
+                        });
                     }
                 }
             }
         }
-        if image_urls.len() < 8 {
-            if let Some(backdrops) = images.get("backdrops").and_then(|b| b.as_array()) {
-                for b in backdrops.iter() {
-                    if image_urls.len() >= 8 {
-                        break;
-                    }
-                    if let Some(path) = b.get("file_path").and_then(|f| f.as_str()) {
-                        let url = img_url(path, "/w780");
-                        if !image_urls.contains(&url) {
-                            image_urls.push(url);
-                        }
+        // Backdrops: max 2, sorted by vote_average descending
+        if let Some(backdrops) = images.get("backdrops").and_then(|b| b.as_array()) {
+            let mut sorted_backdrops: Vec<&serde_json::Value> = backdrops.iter().collect();
+            sorted_backdrops.sort_by(|a, b| {
+                let va = a.get("vote_average").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                let vb = b.get("vote_average").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                vb.partial_cmp(&va).unwrap_or(std::cmp::Ordering::Equal)
+            });
+            for b in sorted_backdrops.iter() {
+                if api_images.iter().filter(|i| i.kind.as_deref() == Some("backdrop")).count() >= 2 {
+                    break;
+                }
+                if let Some(path) = b.get("file_path").and_then(|f| f.as_str()) {
+                    let url = img_url(path, "/original");
+                    if !api_images.iter().any(|i| i.url == url) {
+                        api_images.push(ApiImage {
+                            url,
+                            thumbnail_b64: None,
+                            kind: Some("backdrop".to_string()),
+                        });
                     }
                 }
             }
         }
     }
     // Fallback: poster_path from main body
-    if image_urls.is_empty() {
+    if api_images.is_empty() {
         if let Some(path) = body.get("poster_path").and_then(|p| p.as_str()) {
-            image_urls.push(img_url(path, "/w500"));
+            api_images.push(ApiImage {
+                url: img_url(path, "/w780"),
+                thumbnail_b64: None,
+                kind: Some("poster".to_string()),
+            });
         }
     }
-    let images = image_urls
-        .into_iter()
-        .map(|url| ApiImage { url, thumbnail_b64: None })
-        .collect();
+    let images = api_images;
 
     Ok(ApiMediaDetail {
         provider: "tmdb".to_string(),

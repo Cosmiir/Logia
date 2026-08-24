@@ -101,9 +101,12 @@ pub struct Media {
     pub updated_at: String,
     pub cover_image: Option<String>,
     pub cover_source_index: Option<i64>,
+    pub backdrop_image: Option<String>,
+    pub backdrop_source_index: Option<i64>,
     pub positive_points: Option<String>,
     pub negative_points: Option<String>,
     pub media_status: Option<String>,
+    pub external_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -163,6 +166,7 @@ pub struct CreateMediaDto {
     pub positive_points: Option<String>,
     pub negative_points: Option<String>,
     pub media_status: Option<String>,
+    pub external_url: Option<String>,
     pub genre_ids: Option<Vec<i64>>,
     pub credits: Option<Vec<super::MediaCreditInput>>,
 }
@@ -186,6 +190,7 @@ pub struct UpdateMediaDto {
     pub positive_points: Option<String>,
     pub negative_points: Option<String>,
     pub media_status: Option<String>,
+    pub external_url: Option<String>,
     pub genre_ids: Option<Vec<i64>>,
     pub credits: Option<Vec<super::MediaCreditInput>>,
 }

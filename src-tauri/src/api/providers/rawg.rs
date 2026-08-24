@@ -209,7 +209,7 @@ pub async fn get_detail(
 
     let images = image_urls
         .into_iter()
-        .map(|url| ApiImage { url, thumbnail_b64: None })
+        .map(|url| ApiImage { url, thumbnail_b64: None, kind: None })
         .collect();
 
     Ok(ApiMediaDetail {

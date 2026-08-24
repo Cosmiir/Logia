@@ -172,6 +172,7 @@ fn build_images(cover: Option<&str>, banner: Option<&str>) -> Vec<ApiImage> {
             images.push(ApiImage {
                 url: url.to_string(),
                 thumbnail_b64: None,
+                kind: None,
             });
         }
     }

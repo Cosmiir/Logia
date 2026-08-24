@@ -59,6 +59,12 @@ impl RateLimiter {
         buckets.insert("anilist_manga".to_string(), TokenBucket::new(2.0, 2.0));
         buckets.insert("igdb".to_string(), TokenBucket::new(4.0, 4.0));
         buckets.insert("itunes".to_string(), TokenBucket::new(2.0, 2.0));
+        // Google Books: 5 req/s (generous quota with API key)
+        buckets.insert("google_books".to_string(), TokenBucket::new(5.0, 5.0));
+        // Open Library: 1 req/s (requests low-volume usage)
+        buckets.insert("openlibrary".to_string(), TokenBucket::new(1.0, 1.0));
+        // BGG: 1 req/s (opaque/strict rate limits)
+        buckets.insert("bgg".to_string(), TokenBucket::new(1.0, 1.0));
 
         Self {
             buckets: Arc::new(Mutex::new(buckets)),
@@ -101,10 +107,11 @@ pub fn user_agent() -> String {
     )
 }
 
-/// Execute an async request with 429 retry + exponential backoff.
+/// Execute an async request with retry + exponential backoff.
 /// `make_request` is called up to `max_retries + 1` times. A result is
-/// considered retryable when it returns `Ok(response)` with status 429,
-/// or when it returns `Err` (network error). Backoff: 1s, 2s, 4s.
+/// considered retryable when it returns `Ok(response)` with status 429
+/// (rate limited), 502/503/504 (transient server errors), or when it
+/// returns `Err` (network error). Backoff: 1s, 2s, 4s.
 pub async fn execute_with_retry<F, Fut>(
     max_retries: u32,
     make_request: F,
@@ -116,24 +123,24 @@ where
     let mut attempt = 0u32;
     loop {
         let result = make_request().await;
-        match result {
-            Ok(resp) if resp.status() == reqwest::StatusCode::TOO_MANY_REQUESTS => {
-                if attempt >= max_retries {
-                    return Ok(resp);
-                }
-                let delay = Duration::from_secs(1u64 << attempt); // 1s, 2s, 4s
-                tokio::time::sleep(delay).await;
-                attempt += 1;
+        let is_retryable = match &result {
+            Ok(resp) => {
+                let status = resp.status();
+                status == reqwest::StatusCode::TOO_MANY_REQUESTS
+                    || status == reqwest::StatusCode::BAD_GATEWAY
+                    || status == reqwest::StatusCode::SERVICE_UNAVAILABLE
+                    || status == reqwest::StatusCode::GATEWAY_TIMEOUT
             }
-            Ok(resp) => return Ok(resp),
-            Err(e) => {
-                if attempt >= max_retries {
-                    return Err(format!("Network error after {} retries: {}", attempt, e));
-                }
-                let delay = Duration::from_secs(1u64 << attempt);
-                tokio::time::sleep(delay).await;
-                attempt += 1;
-            }
+            Err(_) => true,
+        };
+        if !is_retryable {
+            return result.map_err(|e| format!("Network error: {}", e));
         }
+        if attempt >= max_retries {
+            return result.map_err(|e| format!("Network error after {} retries: {}", attempt, e));
+        }
+        let delay = Duration::from_secs(1u64 << attempt); // 1s, 2s, 4s
+        tokio::time::sleep(delay).await;
+        attempt += 1;
     }
 }

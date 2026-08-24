@@ -100,6 +100,9 @@ fn absolutize_covers(media: Vec<Media>, storage_dir: &Path) -> Vec<Media> {
         if let Some(ref cover) = m.cover_image {
             m.cover_image = Some(to_absolute_path(storage_dir, cover));
         }
+        if let Some(ref bd) = m.backdrop_image {
+            m.backdrop_image = Some(to_absolute_path(storage_dir, bd));
+        }
         m
     }).collect()
 }
@@ -616,7 +619,12 @@ pub async fn get_media_by_id(
         if let Some(ref cover) = detail.media.cover_image {
             detail.media.cover_image = Some(to_absolute_path(&storage_dir, cover));
         }
-        
+
+        // Reconstruct absolute path for backdrop_image
+        if let Some(ref bd) = detail.media.backdrop_image {
+            detail.media.backdrop_image = Some(to_absolute_path(&storage_dir, bd));
+        }
+
         // Reconstruct absolute paths for images
         for image in &mut detail.images {
             image.full_path = to_absolute_path(&storage_dir, &image.full_path);
@@ -1272,6 +1280,87 @@ pub async fn set_media_cover(
     Ok(absolute_cover_path)
 }
 
+/// Generate a cropped backdrop image from a gallery image + crop parameters.
+/// Same coordinate system as CoverCropModal but with a wide preview frame
+/// (320×180 = 16:9). Output: 1920×1080 WebP saved as backdrop.webp.
+#[tauri::command]
+pub async fn set_media_backdrop(
+    state: State<'_, AppState>,
+    media_id: i64,
+    pan_x: f64,
+    pan_y: f64,
+    zoom: f64,
+    source_image_index: Option<usize>,
+) -> Result<String, String> {
+    use image::imageops::FilterType;
+
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    let storage_dir = state.storage_dir.lock().map_err(|e| e.to_string())?;
+    let manifest = db::profiles::load_manifest(&storage_dir);
+    let profile_id = &manifest.active_profile_id;
+    let media_dir = db::profiles::profile_media_dir(&storage_dir, profile_id);
+    let media_images_dir = media_dir.join(format!("media_{}", media_id));
+
+    // Get the source image from DB (by index, default first)
+    let images = db::media::get_images(&conn, media_id).map_err(|e| e.to_string())?;
+    let idx = source_image_index.unwrap_or(0);
+    let source_image = images.get(idx).or_else(|| images.first()).ok_or("No images found for this media")?;
+
+    // Reconstruct absolute path for source image
+    let source_path_abs = to_absolute_path(&storage_dir, &source_image.full_path);
+
+    // Load source image from disk
+    let src = image::open(&source_path_abs)
+        .map_err(|e| format!("Failed to open source image: {}", e))?;
+
+    let nat_w = src.width() as f64;
+    let nat_h = src.height() as f64;
+
+    // Wide preview frame (16:9). crop_scale = max so image fills the frame.
+    let preview_w: f64 = 320.0;
+    let preview_h: f64 = 180.0;
+    let cover_scale = (preview_w / nat_w).max(preview_h / nat_h);
+    let total_scale = cover_scale * zoom;
+
+    let visible_w_src = preview_w / total_scale;
+    let visible_h_src = preview_h / total_scale;
+    let center_x_src = nat_w / 2.0 - pan_x / total_scale;
+    let center_y_src = nat_h / 2.0 - pan_y / total_scale;
+
+    let crop_x = (center_x_src - visible_w_src / 2.0).max(0.0).min(nat_w - visible_w_src);
+    let crop_y = (center_y_src - visible_h_src / 2.0).max(0.0).min(nat_h - visible_h_src);
+
+    let crop_w = visible_w_src.min(nat_w) as u32;
+    let crop_h = visible_h_src.min(nat_h) as u32;
+    let crop_x = crop_x as u32;
+    let crop_y = crop_y as u32;
+
+    // Crop and resize to final backdrop size (1920×1080, 16:9)
+    let cropped = src.crop_imm(crop_x, crop_y, crop_w.max(1), crop_h.max(1));
+    let backdrop = cropped.resize_exact(1920, 1080, FilterType::Lanczos3);
+
+    // Save as backdrop.webp
+    std::fs::create_dir_all(&media_images_dir).map_err(|e| e.to_string())?;
+    let backdrop_path = media_images_dir.join("backdrop.webp");
+    let backdrop_webp = encode_webp(&backdrop, 85.0)?;
+    std::fs::write(&backdrop_path, &backdrop_webp).map_err(|e| e.to_string())?;
+
+    // Convert to relative path (from storage_dir) with forward slashes
+    let relative_backdrop_path = backdrop_path
+        .strip_prefix(&*storage_dir)
+        .ok()
+        .and_then(|p| p.to_str())
+        .map(|s| s.replace('\\', "/"))
+        .unwrap_or_else(|| "".to_string());
+
+    // Update DB
+    db::media::set_backdrop_path(&conn, media_id, &relative_backdrop_path, source_image_index.map(|i| i as i64)).map_err(|e| e.to_string())?;
+
+    // Return absolute path to frontend for immediate display
+    let absolute_backdrop_path = to_absolute_path(&storage_dir, &relative_backdrop_path);
+    Ok(absolute_backdrop_path)
+}
+
 /// Delete a single media image by its ID. Removes the file from disk and the DB record.
 #[tauri::command]
 pub async fn delete_media_image(
@@ -1345,6 +1434,32 @@ pub async fn clear_media_cover(
     Ok(())
 }
 
+/// Clear the backdrop image when all images are deleted or backdrop is unset.
+/// Removes the backdrop file from disk and clears the DB path.
+#[tauri::command]
+pub async fn clear_media_backdrop(
+    state: State<'_, AppState>,
+    media_id: i64,
+) -> Result<(), String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    let storage_dir = state.storage_dir.lock().map_err(|e| e.to_string())?;
+    let manifest = db::profiles::load_manifest(&storage_dir);
+    let profile_id = &manifest.active_profile_id;
+    let media_dir = db::profiles::profile_media_dir(&storage_dir, profile_id);
+    let media_images_dir = media_dir.join(format!("media_{}", media_id));
+
+    // Delete backdrop file from disk
+    let backdrop_path = media_images_dir.join("backdrop.webp");
+    if backdrop_path.exists() {
+        let _ = std::fs::remove_file(backdrop_path);
+    }
+
+    // Clear DB record
+    db::media::clear_backdrop_path(&conn, media_id).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 /// Update positions of multiple images at once.
 /// Takes a list of (image_id, position) tuples.
 #[tauri::command]
@@ -1375,6 +1490,9 @@ pub async fn get_similar_media(
     let media: Vec<Media> = media.into_iter().map(|mut m| {
         if let Some(ref cover) = m.cover_image {
             m.cover_image = Some(to_absolute_path(&storage_dir, cover));
+        }
+        if let Some(ref bd) = m.backdrop_image {
+            m.backdrop_image = Some(to_absolute_path(&storage_dir, bd));
         }
         m
     }).collect();

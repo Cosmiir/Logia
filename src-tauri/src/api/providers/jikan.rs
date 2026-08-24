@@ -43,6 +43,7 @@ fn build_images(primary: Option<&str>, extras: &[String]) -> Vec<ApiImage> {
             images.push(ApiImage {
                 url: url.to_string(),
                 thumbnail_b64: None,
+                kind: None,
             });
         }
     }
@@ -55,6 +56,7 @@ fn build_images(primary: Option<&str>, extras: &[String]) -> Vec<ApiImage> {
             images.push(ApiImage {
                 url: url.clone(),
                 thumbnail_b64: None,
+                kind: None,
             });
         }
     }

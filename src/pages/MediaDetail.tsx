@@ -1,45 +1,45 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18next from 'i18next';
 import {
-  ArrowLeft,
-  Pencil,
-  Clock,
   Calendar,
   Image as ImageIcon,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   X,
   ThumbsUp,
   ThumbsDown,
-  Activity,
   Plus,
   Minus,
-  Tag,
-  Paperclip,
   FileText,
   Download,
   BookOpen,
+  Pencil,
 } from 'lucide-react';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { invoke } from '@tauri-apps/api/core';
-import { PersonPhoto } from '@/components/PersonPhoto';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { save } from '@tauri-apps/plugin-dialog';
 import { AppShell, MainContent } from '@/components/Layout';
 import SharedHeader from '@/components/SharedHeader';
+import { MediaDetailBackdrop } from '@/components/MediaDetailBackdrop';
 import MarkdownViewer from '@/components/MarkdownEditor/MarkdownViewer';
+import ActionButtons from '@/components/MediaDetail/ActionButtons';
+import CastSection from '@/components/MediaDetail/CastSection';
+import MediaMetaBar from '@/components/MediaDetail/MediaMetaBar';
+import { SynopsisSection } from '@/components/MediaDetail/SynopsisSection';
+import { MediaCarousel } from '@/components/MediaCarousel';
 import { useNavigationStore } from '@/stores/useNavigationStore';
 import { useFiltersStore } from '@/stores/useFiltersStore';
 import { useMediaDetail, useSimilarMedia, useUpdateMedia } from '@/hooks/useMedia';
 import { useCollections } from '@/hooks/useCollections';
+import { useImageNaturalRatio } from '@/hooks/useImageNaturalRatio';
 import { getCollectionIconComponent } from '@/components/CollectionIcons';
 import { MangaReader } from '@/components/MangaReader';
 import { motion, AnimatePresence } from 'framer-motion';
-import { formatDateFr, formatProgression, formatFileSize } from '@/lib/utils';
+import { formatDateFr, formatFileSize } from '@/lib/utils';
 import { getRatingColor, getRatingCategory } from '@/utils/ratingColors';
-import { MEDIA_STATUS_LABELS, MEDIA_STATUS_COLORS, PROGRESS_STATUS_LABELS, PROGRESS_STATUS_COLORS } from '@/lib/status-labels';
+import { PROGRESS_STATUS_LABELS, PROGRESS_STATUS_COLORS } from '@/lib/status-labels';
 import { MAX_MATCHING_GENRES } from '@/lib/constants';
 import type { MediaAttachment } from '@/types';
 import * as Flags from 'country-flag-icons/react/3x2';
@@ -47,23 +47,6 @@ import * as Flags from 'country-flag-icons/react/3x2';
 /* ================================================================== */
 /*  Constants                                                          */
 /* ================================================================== */
-// These maps are functions so labels are resolved via i18next at call time
-const EXTRA_MEDIA_STATUS: Record<string, { label: () => string; color: string }> = {
-  hiatus: { label: () => i18next.t('media.status.hiatus'), color: '#f59e0b' },
-  cancelled: { label: () => i18next.t('media.status.cancelled'), color: '#ef4444' },
-};
-
-const getMediaStatusInfo = (status: string): { label: string; color: string } => {
-  if (status in EXTRA_MEDIA_STATUS) {
-    const extra = EXTRA_MEDIA_STATUS[status];
-    return { label: extra.label(), color: extra.color };
-  }
-  return {
-    label: MEDIA_STATUS_LABELS[status as keyof typeof MEDIA_STATUS_LABELS] ?? status,
-    color: MEDIA_STATUS_COLORS[status as keyof typeof MEDIA_STATUS_COLORS] ?? '#ffffff',
-  };
-};
-
 const getProgressStatusInfo = (status: string): { label: string; color: string } => ({
   label: PROGRESS_STATUS_LABELS[status as keyof typeof PROGRESS_STATUS_LABELS] ?? status,
   color: PROGRESS_STATUS_COLORS[status as keyof typeof PROGRESS_STATUS_COLORS] ?? '#ffffff',
@@ -77,28 +60,13 @@ function parseBulletPoints(text: string): string[] {
 /* ================================================================== */
 /*  Section header                                                     */
 /* ================================================================== */
-const SectionHeader: React.FC<{ title: string; accent: string; extra?: React.ReactNode }> = ({ title, accent, extra }) => (
+const SectionHeader: React.FC<{ title: string; extra?: React.ReactNode }> = ({ title, extra }) => (
   <div className="flex items-center gap-2.5 mb-5">
-    <div className="w-[3px] h-5 rounded-full shrink-0" style={{ backgroundColor: accent }} />
     <h3 className="text-sm font-bold text-white">{title}</h3>
     {extra && <div className="ml-auto">{extra}</div>}
   </div>
 );
 
-/* ================================================================== */
-/*  Info row                                                           */
-/* ================================================================== */
-const InfoRow: React.FC<{ icon: React.ElementType; label: string; children: React.ReactNode }> = ({ icon: Icon, label, children }) => (
-  <div className="flex items-start gap-3 py-2.5">
-    <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center shrink-0 mt-0.5">
-      <Icon className="w-4 h-4 text-white/30" />
-    </div>
-    <div className="flex-1 min-w-0">
-      <p className="text-[10px] font-semibold text-white/25 uppercase tracking-wider mb-0.5">{label}</p>
-      <div className="text-sm text-white/80">{children}</div>
-    </div>
-  </div>
-);
 
 /* ================================================================== */
 /*  Progression + Dates — merged card with CIRCLE                       */
@@ -156,8 +124,8 @@ const ProgressionWithDatesCard: React.FC<{
   };
 
   return (
-    <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5 space-y-3">
-      <p className="text-[10px] font-semibold text-white/25 uppercase tracking-wider mb-1">{i18next.t('common.progression')}</p>
+    <div className="space-y-3">
+      <SectionHeader title={i18next.t('common.progression')} />
 
       {/* ── Experience entries ── */}
       {hasDates && (
@@ -165,7 +133,7 @@ const ProgressionWithDatesCard: React.FC<{
           <div className="flex flex-wrap gap-2">
             {entries.map((entry, idx) => {
               const isFirst = idx === 0;
-              const dateStr = isFirst ? experienceDate : entry.date;
+              const dateStr = entry.date;
               const label = isFirst
                 ? (dateLabel || i18next.t('media.experienceDate'))
                 : (replayDateLabel || i18next.t('mediaDetail.newExperience')) + (entries.length > 2 ? ` ${idx}` : '');
@@ -256,69 +224,6 @@ const ProgressionWithDatesCard: React.FC<{
           </div>
         </div>
       </div>
-    </div>
-  );
-};
-
-/* ================================================================== */
-/*  Synopsis expandable card                                           */
-/* ================================================================== */
-const SYNOPSIS_COLLAPSED_HEIGHT = 160; // px
-
-const SynopsisCard: React.FC<{ synopsis: string; accent: string }> = ({ synopsis, accent }) => {
-  const [expanded, setExpanded] = useState(false);
-  const [needsExpand, setNeedsExpand] = useState(true);
-
-  const contentRef = useCallback((node: HTMLDivElement | null) => {
-    if (node) {
-      const tooTall = node.scrollHeight > SYNOPSIS_COLLAPSED_HEIGHT + 20;
-      setNeedsExpand(tooTall);
-    }
-  }, []);
-
-  return (
-    <div className="glass-card rounded-2xl p-6 mb-6">
-      <SectionHeader title={i18next.t('mediaDetail.synopsis')} accent={accent} />
-
-      <div className="relative">
-        {/* Content with animated height + mask fade when collapsed */}
-        <div
-          className="overflow-hidden"
-          style={{
-            maxHeight: expanded || !needsExpand ? 2000 : SYNOPSIS_COLLAPSED_HEIGHT,
-            transition: needsExpand ? 'max-height 0.5s ease-in-out' : 'none',
-            WebkitMaskImage: needsExpand && !expanded
-              ? 'linear-gradient(to bottom, black 60%, transparent 100%)'
-              : 'none',
-            maskImage: needsExpand && !expanded
-              ? 'linear-gradient(to bottom, black 60%, transparent 100%)'
-              : 'none',
-          }}
-        >
-          <div ref={contentRef}>
-            <MarkdownViewer
-              content={synopsis}
-              className="text-[13px] text-white/60 leading-relaxed yfm"
-            />
-          </div>
-        </div>
-
-      </div>
-
-      {/* Expand / collapse button */}
-      {needsExpand && (
-        <button
-          type="button"
-          onClick={() => setExpanded(e => !e)}
-          className="mt-3 flex items-center gap-1.5 text-[11px] font-semibold text-white/30 hover:text-white/70 transition-colors cursor-pointer group"
-        >
-          <span>{expanded ? i18next.t('mediaDetail.collapse') : i18next.t('mediaDetail.readMore')}</span>
-          <ChevronDown
-            className="w-3.5 h-3.5 transition-transform duration-300"
-            style={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
-          />
-        </button>
-      )}
     </div>
   );
 };
@@ -727,11 +632,34 @@ const AttachmentItem: React.FC<{
 };
 
 /* ================================================================== */
+/*  Gallery Thumbnail (respects original aspect ratio)                 */
+/* ================================================================== */
+const GalleryThumb: React.FC<{ src: string; onClick: () => void }> = ({ src, onClick }) => {
+  const { ratio, onLoad } = useImageNaturalRatio();
+  return (
+    <div
+      className="h-48 rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all hover:scale-[1.02]"
+      style={{ aspectRatio: ratio }}
+      onClick={onClick}
+    >
+      <img
+        src={src}
+        alt=""
+        className="w-full h-full object-cover select-none"
+        draggable={false}
+        loading="lazy"
+        onLoad={onLoad}
+      />
+    </div>
+  );
+};
+
+/* ================================================================== */
 /*  Main component                                                     */
 /* ================================================================== */
 const MediaDetail: React.FC = () => {
   const { t } = useTranslation();
-  const { viewingMediaId, goBack, navigateToMediaCreate, navigateToMediaDetail, navigate } = useNavigationStore();
+  const { viewingMediaId, navigateToMediaCreate, navigateToMediaDetail, navigate } = useNavigationStore();
   const { filterByPerson } = useFiltersStore();
   const { data: media, isLoading } = useMediaDetail(viewingMediaId);
 
@@ -740,13 +668,26 @@ const MediaDetail: React.FC = () => {
     navigate('library');
   };
   const { data: collections } = useCollections();
-  const { data: similarMedia = [] } = useSimilarMedia(viewingMediaId, media?.collection_id ?? null, 5);
+  const { data: similarMedia = [] } = useSimilarMedia(viewingMediaId, media?.collection_id ?? null, 4);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [activeReader, setActiveReader] = useState<{ path: string; name: string } | null>(null);
   const [progressPrompt, setProgressPrompt] = useState<{ filename: string; volumeNum: number } | null>(null);
   const updateMedia = useUpdateMedia();
 
   const attachments = media?.attachments ?? [];
+
+  const firstCbzAttachment = attachments.find(a => {
+    const ext = a.original_name.toLowerCase().split('.').pop();
+    return ext === 'cbz' || ext === 'zip';
+  });
+
+  const handleRead = () => {
+    if (firstCbzAttachment) {
+      setActiveReader({ path: firstCbzAttachment.stored_path, name: firstCbzAttachment.original_name });
+    }
+  };
+
+  const canReadMedia = !!firstCbzAttachment;
 
   // Calculate current media's matching genre IDs once (outside the map loop)
   const currentMatchingGenreIds = useMemo(
@@ -759,11 +700,17 @@ const MediaDetail: React.FC = () => {
 
   if (isLoading) {
     return (
-      <AppShell>
-        <SharedHeader activePage="media-detail" />
-        <MainContent>
-          <div className="flex items-center justify-center py-32">
-            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      <AppShell className="select-text">
+        <MainContent useContainer={false} className="!p-0 overflow-x-hidden">
+          <div className="relative min-h-full">
+            <div className="absolute top-0 left-0 w-[calc(100%+6px)] z-30">
+              <SharedHeader activePage="media-detail" transparent />
+            </div>
+            <div className="relative z-10 px-10 pr-[34px] pt-[76px] pb-6 md:pb-8">
+              <div className="flex items-center justify-center py-32">
+                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            </div>
           </div>
         </MainContent>
       </AppShell>
@@ -772,10 +719,16 @@ const MediaDetail: React.FC = () => {
 
   if (!media) {
     return (
-      <AppShell>
-        <SharedHeader activePage="media-detail" />
-        <MainContent>
-          <div className="text-center py-32 text-white/30">{t('mediaDetail.mediaNotFound')}</div>
+      <AppShell className="select-text">
+        <MainContent useContainer={false} className="!p-0 overflow-x-hidden">
+          <div className="relative min-h-full">
+            <div className="absolute top-0 left-0 w-[calc(100%+6px)] z-30">
+              <SharedHeader activePage="media-detail" transparent />
+            </div>
+            <div className="relative z-10 px-10 pr-[34px] pt-[76px] pb-6 md:pb-8">
+              <div className="text-center py-32 text-white/30">{t('mediaDetail.mediaNotFound')}</div>
+            </div>
+          </div>
         </MainContent>
       </AppShell>
     );
@@ -788,6 +741,7 @@ const MediaDetail: React.FC = () => {
   const hasProgress = media.progress_current != null && media.progress_total != null && media.progress_total > 0;
 
   const coverSrc = media.cover_image ? `${convertFileSrc(media.cover_image)}?t=${media.updated_at}` : null;
+  const backdropSrc = media.backdrop_image ? `${convertFileSrc(media.backdrop_image)}?t=${media.updated_at}` : null;
   const galleryImages = media.images?.map(i => i.full_path) ?? [];
 
   const handleAttachmentDownload = async (path: string, fileName: string) => {
@@ -823,264 +777,183 @@ const MediaDetail: React.FC = () => {
     }
   };
 
-  // Accents par section
-  const ACCENT_SIMILAIRES = 'var(--theme-accent)';
-  const ACCENT_SYNOPSIS = '#60a5fa';
-  const ACCENT_EXPERIENCE = '#f472b6';
-  const ACCENT_GALERIE = '#34d399';
-  const ACCENT_CREDITS = '#a78bfa';
+  const hasBackdrop = !!backdropSrc;
 
   return (
     <AppShell className="select-text">
-      <SharedHeader activePage="media-detail" />
-      <MainContent>
+      <MainContent useContainer={false} className="!p-0 overflow-x-hidden">
 
-        {/* ── Top bar ── */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <button type="button" onClick={goBack}
-              className="flex items-center justify-center w-9 h-9 rounded-xl bg-white/5 border border-white/10 text-text-secondary hover:bg-white/10 hover:text-white transition-all cursor-pointer">
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-            <h1 className="text-lg font-bold text-white truncate max-w-lg">{media.title}</h1>
+        {/* ── Page wrapper ── */}
+        <div className="relative min-h-full">
+          {hasBackdrop && <MediaDetailBackdrop src={backdropSrc} />}
+          
+          {/* Overlay header — sits at top of scroll container */}
+          <div className="absolute top-0 left-0 w-[calc(100%+6px)] z-30">
+            <SharedHeader
+              activePage="media-detail"
+              transparent
+            />
           </div>
-          <button type="button" onClick={() => navigateToMediaCreate(media.collection_id, media.id)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-dark rounded-xl text-sm font-semibold text-white transition-all cursor-pointer">
+
+          {/* Edit button — contextuel au hero, sous le header (sous profil/bell) */}
+          <button
+            type="button"
+            onClick={() => navigateToMediaCreate(media.collection_id, media.id)}
+            className="absolute top-[80px] right-[34px] z-20 inline-flex items-center gap-2 px-4 h-[40px] rounded-xl text-sm font-semibold text-white bg-primary/20 hover:bg-primary/30 border border-primary/30 transition-colors cursor-pointer"
+          >
             <Pencil className="w-4 h-4" />
-            {t('media.edit')}
+            {t('mediaDetail.edit')}
           </button>
-        </div>
 
-        {/* ── Section 1: Hero card (Cover + metadata) + Similaires ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          {/* Content — starts at pt-[76px] (after the transparent header) */}
+          <div className="relative z-10 px-10 pr-[34px] pt-[76px] pb-6 md:pb-8">
 
-          {/* Left 2/3: Hero glass card */}
-          <div className="lg:col-span-2 glass-card rounded-2xl p-6 flex gap-6">
-            {/* Cover */}
-            <div className="shrink-0">
-              {coverSrc ? (
-                <div className="w-[160px] h-[240px] rounded-xl overflow-hidden shadow-2xl cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => setLightboxIndex(0)}>
-                  <img src={coverSrc} alt="" className="w-full h-full object-cover" />
-                </div>
-              ) : (
-                <div className="w-[160px] h-[240px] rounded-xl bg-gradient-to-br from-white/8 to-white/3 flex items-center justify-center">
-                  <ImageIcon className="w-10 h-10 text-white/10" />
-                </div>
-              )}
-            </div>
-
-            {/* Metadata */}
-            <div className="flex-1 min-w-0 flex flex-col">
-              {/* Collection badge */}
-              {collection && (
-                <div className="flex items-center gap-2 mb-2">
-                  {CollIcon && <CollIcon className="w-3.5 h-3.5" style={{ color: collColor }} />}
-                  <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: collColor }}>{collection.name}</span>
-                </div>
-              )}
-
-              {/* Title + creator */}
-              <h2 className="text-2xl font-bold text-white mb-1 leading-tight">{media.title}</h2>
-              {media.creator && (
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                  {media.creator.split(';').map(c => c.trim()).filter(Boolean).map((cName, idx) => (
-                    <span
-                      key={idx}
-                      className="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-medium bg-white/5 border border-white/10 text-white/60"
-                    >
-                      {cName}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {/* Info rows */}
-              <div className="space-y-0">
-                {media.release_date && (
-                  <InfoRow icon={Calendar} label={t('common.releaseDate')}>
-                    {formatDateFr(media.release_date)}
-                  </InfoRow>
+          {/* ── Section 1: Hero (Cover + metadata over backdrop) ── */}
+          <div className="mb-6">
+            <div className="flex flex-col md:flex-row gap-6 items-start">
+              {/* Cover poster */}
+              <div
+                className="shrink-0 w-[240px] xl:w-[270px] aspect-[2/3] rounded-2xl overflow-hidden shadow-2xl shadow-black/80 ring-1 ring-white/15 hover:ring-white/30 hover:scale-[1.01] transition-all duration-300 cursor-pointer group relative bg-black/40"
+                onClick={() => setLightboxIndex(0)}
+                title={t('mediaDetail.viewPoster')}
+              >
+                {coverSrc ? (
+                  <img
+                    src={coverSrc}
+                    alt={media.title}
+                    className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                  />
+                ) : (
+                  <div className="h-full w-full bg-gradient-to-br from-white/8 to-white/3 flex items-center justify-center">
+                    <ImageIcon className="w-12 h-12 text-white/10" />
+                  </div>
                 )}
-                {(media.progress_total != null && media.progress_total > 0) && (
-                  <InfoRow icon={Clock} label={collection?.duration_label || t('mediaDetail.duration')}>
-                    {formatProgression(media.progress_total, collection?.progression_label, collection?.plural_with_s ?? false)}
-                  </InfoRow>
-                )}
-                {media.media_status && (() => {
-                  const msInfo = getMediaStatusInfo(media.media_status);
-                  return (
-                    <InfoRow icon={Activity} label={t('common.status')}>
-                      <span
-                        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium"
-                        style={{
-                          backgroundColor: `${msInfo.color}20`,
-                          color: msInfo.color,
-                          border: `1px solid ${msInfo.color}30`,
-                        }}
-                      >
-                        {msInfo.label}
-                      </span>
-                    </InfoRow>
-                  );
-                })()}
+                {/* Subtle inner hover glow */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4">
+                  <span className="text-[11px] font-semibold text-white/80 bg-black/60 px-3 py-1 rounded-full backdrop-blur-sm border border-white/10">
+                    {i18next.t('common.preview')}
+                  </span>
+                </div>
               </div>
 
-              {/* Genres with label */}
-              {media.genres && media.genres.length > 0 && (
-                <div className="mt-auto pt-4">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <Tag className="w-3 h-3 text-white/25" />
-                    <p className="text-[10px] font-semibold text-white/25 uppercase tracking-wider">{t('common.genres')}</p>
-                  </div>
-                  {/* Matching genres (position < MAX_MATCHING_GENRES) */}
-                  <div className="flex flex-wrap gap-1.5">
-                    {media.genres.filter(g => (g.position ?? 0) < MAX_MATCHING_GENRES).map(g => (
-                      <span
-                        key={g.id}
-                        className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium"
-                        style={{ backgroundColor: `${g.color}20`, color: `color-mix(in srgb, ${g.color} 75%, white)`, border: `1px solid ${g.color}50` }}
-                      >
-                        {g.name}
-                      </span>
-                    ))}
-                  </div>
-                  {/* Filter genres (position >= MAX_MATCHING_GENRES) */}
-                  {media.genres.some(g => (g.position ?? 0) >= MAX_MATCHING_GENRES) && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {media.genres.filter(g => (g.position ?? 0) >= MAX_MATCHING_GENRES).map(g => (
-                        <span
-                          key={g.id}
-                          className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium"
-                          style={{ backgroundColor: `${g.color}15`, color: `color-mix(in srgb, ${g.color} 50%, white)`, border: `1px solid ${g.color}40` }}
-                        >
-                          {g.name}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Right 1/3: Médias similaires */}
-          <div className="lg:col-span-1">
-            <div className="glass-card rounded-2xl p-5 h-full">
-              <SectionHeader title={t('mediaDetail.similarMedia')} accent={ACCENT_SIMILAIRES} />
-              {similarMedia.length > 0 ? (
-                <div className="flex flex-col gap-2">
-                  {similarMedia.slice(0, 4).map((similar) => {
-                    // Filter similar media's genres to only include matching genres (position < 9) that are also in current media's matching set
-                    const commonGenres = similar.genres?.filter(
-                      g => (g.position ?? 0) < MAX_MATCHING_GENRES && currentMatchingGenreIds.has(g.id)
-                    ) || [];
-                    return (
-                      <div key={similar.id} className="flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-all hover:bg-white/5"
-                        onClick={() => navigateToMediaDetail(similar.id)}>
-                        <div className="shrink-0 w-10 h-14 rounded-lg overflow-hidden bg-white/5">
-                          {similar.cover_image ? (
-                            <img src={`${convertFileSrc(similar.cover_image)}?t=${similar.updated_at}`} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <ImageIcon className="w-4 h-4 text-white/20" />
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-white truncate">{similar.title}</p>
-                          {commonGenres.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {commonGenres.map(g => (
-                                <span key={g.id} className="text-[9px] px-1.5 py-0.5 rounded-full whitespace-nowrap"
-                                  style={{ backgroundColor: `${g.color}25`, color: `color-mix(in srgb, ${g.color} 75%, white)`, border: `1px solid ${g.color}50` }}>
-                                  {g.name}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        {similar.user_rating != null && (
-                          <div className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold"
-                            style={{ backgroundColor: getRatingColor(similar.user_rating), boxShadow: `0 2px 6px ${getRatingColor(similar.user_rating)}55` }}>
-                            {similar.user_rating}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-32 text-center">
-                  <p className="text-xs text-white/30">{t('mediaDetail.noSimilarMedia')}</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* ── Section 2: Synopsis ── */}
-        {media.synopsis && (
-          <SynopsisCard synopsis={media.synopsis} accent={ACCENT_SYNOPSIS} />
-        )}
-
-        {/* ── Section: Crédits ── */}
-        {media.credits && media.credits.length > 0 && (
-          <div className="glass-card rounded-2xl p-6 mb-6">
-            <SectionHeader title={t('common.credits')} accent={ACCENT_CREDITS} />
-            <div className="flex gap-4 overflow-x-auto pb-3 pt-1 custom-scrollbar">
-              {media.credits.map((credit, i) => (
-                <div
-                  key={i}
-                  onClick={() => handlePersonClick(credit.person_id)}
-                  className="flex flex-col items-center shrink-0 w-[100px] group/item cursor-pointer"
-                >
-                  <PersonPhoto
-                    name={credit.name}
-                    photoPath={credit.photo_path}
-                    widthClass="w-[100px]"
-                    textSize="text-xl"
-                    className="mb-2 transition-transform duration-300 group-hover/item:scale-105"
-                  />
-                  <span className="text-[12px] font-bold text-white text-center line-clamp-2 w-full mb-0.5" title={credit.name}>
-                    {credit.name}
-                  </span>
-                  {credit.role && (
-                    <span className="text-[11px] text-white/40 text-center line-clamp-2 w-full" title={credit.role}>
-                      {credit.role}
+              {/* Main Hero Details */}
+              <div className="flex-1 min-w-0 flex flex-col">
+                {/* Collection badge */}
+                {collection && (
+                  <div className="flex items-center gap-2 mb-2">
+                    {CollIcon && <CollIcon className="w-3.5 h-3.5 shrink-0" style={{ color: collColor }} />}
+                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: collColor }}>
+                      {collection.name}
                     </span>
-                  )}
+                  </div>
+                )}
+
+                {/* Title */}
+                <h1 className="text-3xl sm:text-4xl xl:text-5xl font-black text-white mb-3 leading-tight tracking-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)] max-w-3xl">
+                  {media.title}
+                </h1>
+
+                {/* Metadata bar (creator / release / duration) */}
+                <MediaMetaBar media={media} collection={collection} className="mb-4" />
+
+                {/* Synopsis (Constrained width for readability and clean right side) */}
+                {media.synopsis && (
+                  <div className="mb-4 max-w-2xl">
+                    <SynopsisSection synopsis={media.synopsis} />
+                  </div>
+                )}
+
+                {/* Casting (inline in hero, no glass-card wrapper) */}
+                {media.credits && media.credits.length > 0 && (
+                  <div className="mb-4 max-w-2xl">
+                    <CastSection
+                      credits={media.credits}
+                      onPersonClick={handlePersonClick}
+                      bare
+                    />
+                  </div>
+                )}
+
+                {/* Actions + Sleek Compact Metadata Bar */}
+                <div className="mt-auto pt-2 flex flex-col gap-3.5 items-start">
+                  <ActionButtons
+                    canRead={canReadMedia}
+                    onRead={handleRead}
+                    externalUrl={media.external_url}
+                  />
                 </div>
-              ))}
+              </div>
             </div>
           </div>
-        )}
 
-        {/* ── Section 3: Mon expérience ── */}
-        <div className="glass-card rounded-2xl p-6 mb-6">
-          <SectionHeader title={t('mediaDetail.myExperience')} accent={ACCENT_EXPERIENCE} />
+          {/* ── Section: Mon expérience + Médias similaires / Genres / Galerie ── */}
+          <div className="mb-6 grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+            {/* Colonne gauche 2/3: Review + Attachments */}
+            <div className="lg:col-span-2 space-y-4">
 
-            {/* Left 2/3: Avis uniquement */}
-            <div className="lg:col-span-2">
+              {/* Review */}
               {media.user_review ? (
-                <div className="p-5 rounded-xl bg-white/[0.03] border border-white/5">
-                  <p className="text-[10px] font-semibold text-white/25 uppercase tracking-wider mb-3">{t('mediaCreate.review')}</p>
+                <div className="glass-card rounded-2xl p-5">
+                  <SectionHeader title={t('mediaCreate.review')} />
                   <MarkdownViewer content={media.user_review} className="text-sm text-white/70 leading-relaxed yfm" />
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center p-8 text-center border border-dashed border-white/10 rounded-xl min-h-[200px]">
-                  <p className="text-sm text-white/30">{t('mediaDetail.noReview')}</p>
+                <div className="glass-card rounded-2xl p-5">
+                  <SectionHeader title={t('mediaCreate.review')} />
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <p className="text-sm text-white/30">{t('mediaDetail.noReview')}</p>
+                  </div>
                 </div>
               )}
 
-              {attachments.length > 0 && (
-                <div className="mt-4 p-4 rounded-xl bg-white/[0.03] border border-white/5">
-                  <div className="flex items-center gap-1.5 mb-3">
-                    <Paperclip className="w-3.5 h-3.5 text-emerald-300/70" />
-                    <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider">{i18next.t('common.attachments')}</p>
-                    <span className="ml-auto text-[10px] text-white/20">{attachments.length}</span>
+              {/* Points positifs / négatifs — regroupés avec la review, côte à côte si les deux existent */}
+              {(media.positive_points || media.negative_points) && (
+                <div className="glass-card rounded-2xl p-5">
+                  <div className={`grid gap-5 ${media.positive_points && media.negative_points ? 'sm:grid-cols-2' : 'grid-cols-1'}`}>
+                    {media.positive_points && (
+                      <div>
+                        <div className="flex items-center gap-2.5 mb-4">
+                          <ThumbsUp className="w-4 h-4 text-emerald-400/70" />
+                          <h3 className="text-sm font-bold text-white">{i18next.t('mediaDetail.positivePoints')}</h3>
+                        </div>
+                        <ul className="space-y-1">
+                          {parseBulletPoints(media.positive_points).map((pt, i) => (
+                            <li key={i} className="flex items-start gap-2 text-xs text-white/60">
+                              <span className="text-emerald-400/50 mt-0.5">•</span>
+                              <span>{pt}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {media.negative_points && (
+                      <div>
+                        <div className="flex items-center gap-2.5 mb-4">
+                          <ThumbsDown className="w-4 h-4 text-red-400/70" />
+                          <h3 className="text-sm font-bold text-white">{i18next.t('mediaDetail.negativePoints')}</h3>
+                        </div>
+                        <ul className="space-y-1">
+                          {parseBulletPoints(media.negative_points).map((pt, i) => (
+                            <li key={i} className="flex items-start gap-2 text-xs text-white/60">
+                              <span className="text-red-400/50 mt-0.5">•</span>
+                              <span>{pt}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
+                </div>
+              )}
+
+              {/* Attachments */}
+              {attachments.length > 0 && (
+                <div className="glass-card rounded-2xl p-5">
+                  <SectionHeader
+                    title={i18next.t('common.attachments')}
+                    extra={<span className="text-xs text-white/25">{attachments.length}</span>}
+                  />
                   <div className="space-y-2">
                     {attachments.map((attachment) => (
                       <AttachmentItem
@@ -1094,27 +967,159 @@ const MediaDetail: React.FC = () => {
                   </div>
                 </div>
               )}
+
             </div>
 
-            {/* Right 1/3: Progression+Dates + Points +/- */}
+            {/* Colonne droite 1/3: pile de glass-cards */}
             <div className="lg:col-span-1 space-y-4">
 
-              {/* Progression + Dates fusionnés */}
-              {hasProgress && (
-                <ProgressionWithDatesCard
-                  current={media.progress_current!}
-                  total={media.progress_total!}
-                  progressStatus={media.progress_status}
-                  progressionLabel={collection?.progression_label}
-                  pluralWithS={collection?.plural_with_s}
-                  experienceDate={media.experience_date}
-                  experienceEntries={media.experience_entries}
-                  dateLabel={collection?.date_label}
-                  replayDateLabel={collection?.replay_date_label}
-                />
+              {/* 1. Médias similaires */}
+              {similarMedia.length > 0 && (
+                <div className="glass-card rounded-2xl p-5">
+                  <SectionHeader title={t('mediaDetail.similarMedia')} />
+                  <MediaCarousel minCardWidth={112} showDots={false}>
+                    {similarMedia.map((similar) => {
+                      const commonGenres = similar.genres?.filter(
+                        g => (g.position ?? 0) < MAX_MATCHING_GENRES && currentMatchingGenreIds.has(g.id)
+                      ) || [];
+                      const imgSrc = similar.cover_image
+                        ? `${convertFileSrc(similar.cover_image)}?t=${similar.updated_at}`
+                          : null;
+
+                        return (
+                          <div
+                            key={similar.id}
+                            className="w-full aspect-[2/3] rounded-xl relative group cursor-pointer"
+                            onClick={() => navigateToMediaDetail(similar.id)}
+                          >
+                            <div className="absolute inset-0 rounded-xl border border-white/10 group-hover:border-white/30 transition-colors duration-300 pointer-events-none z-10" />
+
+                            <div
+                              className="absolute inset-0 rounded-xl overflow-hidden bg-black/40"
+                              style={{ clipPath: 'inset(0 round 12px)' }}
+                            >
+                              {/* Portrait Cover Artwork */}
+                            {imgSrc ? (
+                              <img
+                                src={imgSrc}
+                                alt={similar.title}
+                                className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center">
+                                <ImageIcon className="w-8 h-8 text-white/20" />
+                              </div>
+                            )}
+
+                            {/* Rating badge floating top-right */}
+                            {similar.user_rating != null && (
+                              <div
+                                className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold text-white shadow-md leading-none backdrop-blur-md z-10"
+                                style={{
+                                  backgroundColor: getRatingColor(similar.user_rating),
+                                  boxShadow: `0 2px 8px ${getRatingColor(similar.user_rating)}66`,
+                                }}
+                              >
+                                {similar.user_rating}
+                              </div>
+                            )}
+
+                            {/* Bottom default overlay: Title + Year */}
+                            <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/90 via-black/50 to-transparent group-hover:opacity-0 transition-opacity duration-300">
+                              <p className="text-[11px] font-bold text-white truncate" title={similar.title}>
+                                {similar.title}
+                              </p>
+                              {similar.release_date && (
+                                <p className="text-[9px] text-white/45 font-medium">
+                                  {new Date(similar.release_date).getFullYear() || ''}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Hover Overlay: Common genres + Title (visible ONLY on hover) */}
+                            <div className="absolute inset-0 bg-black/85 backdrop-blur-[2px] p-2 flex flex-col justify-center items-center gap-1.5 text-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                              <p className="text-[11px] font-bold text-white line-clamp-2 leading-tight">
+                                {similar.title}
+                              </p>
+                              {commonGenres.length > 0 ? (
+                                <div className="flex flex-wrap gap-1 justify-center mt-1">
+                                  {commonGenres.slice(0, 3).map(g => (
+                                    <span
+                                      key={g.id}
+                                      className="text-[8px] font-semibold px-1.5 py-0.5 rounded-md"
+                                      style={{
+                                        backgroundColor: `${g.color}35`,
+                                        color: `color-mix(in srgb, ${g.color} 90%, white)`,
+                                        border: `1px solid ${g.color}55`,
+                                      }}
+                                    >
+                                      {g.name}
+                                    </span>
+                                  ))}
+                                  {commonGenres.length > 3 && (
+                                    <span className="text-[8px] text-white/40 font-semibold">
+                                      +{commonGenres.length - 3}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                similar.release_date && (
+                                  <span className="text-[10px] text-white/40 font-medium">
+                                    {new Date(similar.release_date).getFullYear() || ''}
+                                  </span>
+                                )
+                              )}
+                            </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </MediaCarousel>
+                  </div>
               )}
 
-              {/* Note */}
+              {/* 2. Genres */}
+              {(media.genres?.length ?? 0) > 0 && (
+                <div className="glass-card rounded-2xl p-5">
+                  <SectionHeader title={t('mediaDetail.genres')} />
+                  <div className="flex flex-wrap gap-2">
+                    {[...(media.genres ?? [])]
+                      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+                      .map(g => (
+                        <span
+                          key={g.id}
+                          className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium select-none"
+                          style={{
+                            backgroundColor: `${g.color}20`,
+                            border: `1px solid ${g.color}40`,
+                            color: `color-mix(in srgb, ${g.color} 75%, white)`,
+                          }}
+                        >
+                          <span className="truncate max-w-[120px]">{g.name}</span>
+                        </span>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 3. Progression + Dates */}
+              {hasProgress && (
+                <div className="glass-card rounded-2xl p-5">
+                  <ProgressionWithDatesCard
+                    current={media.progress_current!}
+                    total={media.progress_total!}
+                    progressStatus={media.progress_status}
+                    progressionLabel={collection?.progression_label}
+                    pluralWithS={collection?.plural_with_s}
+                    experienceDate={media.experience_date}
+                    experienceEntries={media.experience_entries}
+                    dateLabel={collection?.date_label}
+                    replayDateLabel={collection?.replay_date_label}
+                  />
+                </div>
+              )}
+
+              {/* 4. Note */}
               {media.user_rating != null && (() => {
                 const ratingColor = getRatingColor(media.user_rating);
                 const ratingCategory = getRatingCategory(media.user_rating);
@@ -1133,8 +1138,8 @@ const MediaDetail: React.FC = () => {
                 });
 
                 return (
-                  <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5">
-                    <p className="text-[10px] font-semibold text-white/25 uppercase tracking-wider mb-3">{t('common.rating')}</p>
+                  <div className="glass-card rounded-2xl p-5">
+                    <SectionHeader title={t('common.rating')} />
 
                     {/* Top row: big number + category badge */}
                     <div className="flex items-center justify-between mb-4">
@@ -1165,65 +1170,28 @@ const MediaDetail: React.FC = () => {
                 );
               })()}
 
-              {/* Points positifs */}
-              {media.positive_points && (
-                <div className="p-4 rounded-xl border border-emerald-500/15 bg-emerald-500/[0.03]">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <ThumbsUp className="w-3.5 h-3.5 text-emerald-400/70" />
-                    <p className="text-[10px] font-semibold text-emerald-400/70 uppercase tracking-wider">{i18next.t('mediaDetail.positivePoints')}</p>
-                  </div>
-                  <ul className="space-y-1">
-                    {parseBulletPoints(media.positive_points).map((pt, i) => (
-                      <li key={i} className="flex items-start gap-2 text-xs text-white/60">
-                        <span className="text-emerald-400/50 mt-0.5">•</span>
-                        <span>{pt}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Points négatifs */}
-              {media.negative_points && (
-                <div className="p-4 rounded-xl border border-red-500/15 bg-red-500/[0.03]">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <ThumbsDown className="w-3.5 h-3.5 text-red-400/70" />
-                    <p className="text-[10px] font-semibold text-red-400/70 uppercase tracking-wider">{i18next.t('mediaDetail.negativePoints')}</p>
-                  </div>
-                  <ul className="space-y-1">
-                    {parseBulletPoints(media.negative_points).map((pt, i) => (
-                      <li key={i} className="flex items-start gap-2 text-xs text-white/60">
-                        <span className="text-red-400/50 mt-0.5">•</span>
-                        <span>{pt}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {/* 5. Galerie — déplacée en pleine largeur (voir ci-dessous) */}
 
             </div>
           </div>
+
+          {/* Galerie — pleine largeur (avis + colonne droite) */}
+          {galleryImages.length > 0 && (
+            <div className="mb-6 glass-card rounded-2xl p-5">
+              <SectionHeader
+                title={t('mediaCreate.gallery')}
+                extra={<span className="text-xs text-white/25">{i18next.t('common.image', { count: galleryImages.length })}</span>}
+              />
+              <div className="flex flex-wrap gap-2 items-start">
+                {galleryImages.map((path, i) => (
+                  <GalleryThumb key={i} src={convertFileSrc(path)} onClick={() => setLightboxIndex(i)} />
+                ))}
+              </div>
+            </div>
+          )}
+
         </div>
-
-        {/* ── Section 4: Galerie ── */}
-        {galleryImages.length > 0 && (
-          <div className="glass-card rounded-2xl p-6 mb-8">
-            <SectionHeader
-              title={t('mediaCreate.gallery')}
-              accent={ACCENT_GALERIE}
-              extra={<span className="text-xs text-white/25">{i18next.t('common.image', { count: galleryImages.length })}</span>}
-            />
-            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-              {galleryImages.map((path, i) => (
-                <div key={i} className="aspect-[2/3] rounded-xl overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all hover:scale-[1.02]"
-                  onClick={() => setLightboxIndex(i)}>
-                  <img src={convertFileSrc(path)} alt="" className="w-full h-full object-cover select-none" draggable={false} loading="lazy" />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
+        </div>
       </MainContent>
 
       {/* Lightbox */}

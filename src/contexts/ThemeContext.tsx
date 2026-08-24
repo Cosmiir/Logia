@@ -29,6 +29,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     root.style.setProperty('--theme-accent-rgb', theme.accentRgb);
     root.style.setProperty('--theme-card-bg', theme.cardBg);
     root.style.setProperty('--theme-card-border', theme.cardBorder);
+    root.style.setProperty('--theme-solid-bg', theme.solidBg);
 
     // Toggle theme-light class based on isDark
     if (theme.isDark) {

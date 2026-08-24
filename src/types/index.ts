@@ -54,10 +54,13 @@ export interface Media {
   positive_points: string | null;
   negative_points: string | null;
   media_status: string | null;
+  external_url: string | null;
   created_at: string;
   updated_at: string;
   cover_image?: string;
   cover_source_index?: number;
+  backdrop_image?: string;
+  backdrop_source_index?: number;
   genres?: Genre[];
 }
 
@@ -227,12 +230,14 @@ export interface CreateMediaDto {
   positive_points?: string;
   negative_points?: string;
   media_status?: string;
+  external_url?: string;
   genre_ids?: number[];
   credits?: MediaCreditInput[];
 }
 
 export interface UpdateMediaDto extends Partial<CreateMediaDto> {
   media_id: number;
+  external_url?: string;
 }
 
 export interface MediaFilters {
@@ -441,6 +446,8 @@ export interface ApiSearchResult {
 export interface ApiImage {
   url: string;
   thumbnail_b64: string | null;
+  /** Image category hint from the provider: "poster", "backdrop", etc. */
+  kind?: string | null;
 }
 
 export interface ApiCredit {

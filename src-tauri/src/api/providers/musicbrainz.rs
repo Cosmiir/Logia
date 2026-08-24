@@ -168,6 +168,7 @@ async fn fetch_cover_art(client: &reqwest::Client, release_id: &str) -> Vec<ApiI
                 images.push(ApiImage {
                     url: url.to_string(),
                     thumbnail_b64: None,
+                    kind: None,
                 });
             }
         }

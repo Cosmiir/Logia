@@ -11,8 +11,12 @@ type DragRegionStyle = React.CSSProperties & {
  * TitleBar — Thin strip at the very top of the window.
  * Full-width drag region + window controls (position depends on style).
  * Replaces the native Windows title bar (decorations: false).
+ *
+ * In `overlay` mode, the TitleBar is positioned absolute on top of the
+ * content (transparent) so a page hero can show through behind the window
+ * controls. Used by immersive pages like MediaDetail.
  */
-const TitleBar: React.FC = () => {
+const TitleBar: React.FC<{ overlay?: boolean }> = ({ overlay = false }) => {
   const style = useProfileSettingsStore((s) => s.personalization.windowControlsStyle);
   const controlsOnLeft = style === 'macos';
   const isHybrid = style === 'hybrid';
@@ -28,10 +32,16 @@ const TitleBar: React.FC = () => {
   const dragRegionStyle: DragRegionStyle = { WebkitAppRegion: 'drag' };
   const noDragStyle: DragRegionStyle = { WebkitAppRegion: 'no-drag' };
 
+  // In overlay mode, position absolute on top of content (transparent).
+  // Otherwise, take space in the flex flow (shrink-0).
+  const positionClass = overlay
+    ? 'h-9 absolute top-0 inset-x-0 z-50'
+    : 'h-9 shrink-0 z-50';
+
   return (
     <div
       data-tauri-drag-region
-      className={`h-9 ${paddingClass} shrink-0 flex items-center justify-between w-full select-none z-50`}
+      className={`${positionClass} ${paddingClass} flex items-center justify-between w-full select-none`}
       style={dragRegionStyle}
     >
       {/* Left slot */}

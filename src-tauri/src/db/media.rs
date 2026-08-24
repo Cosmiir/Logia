@@ -303,7 +303,8 @@ pub fn get_media(
          m.progress_current, m.progress_total, m.progress_status, m.replay_count, m.experience_date, 
          m.created_at, m.updated_at,
          COALESCE(m.cover_path, first_img.thumb_path) as cover_image,
-         m.cover_source_index, m.positive_points, m.negative_points, m.media_status
+         m.cover_source_index, m.backdrop_path, m.backdrop_source_index,
+         m.positive_points, m.negative_points, m.media_status, m.external_url
          FROM media m
          LEFT JOIN media_images first_img ON first_img.id = (
            SELECT id FROM media_images WHERE media_id = m.id ORDER BY position ASC LIMIT 1
@@ -368,9 +369,12 @@ pub fn get_media(
             updated_at: row.get(14)?,
             cover_image: row.get(15)?,
             cover_source_index: row.get(16)?,
-            positive_points: row.get(17)?,
-            negative_points: row.get(18)?,
-            media_status: row.get(19)?,
+            backdrop_image: row.get(17)?,
+            backdrop_source_index: row.get(18)?,
+            positive_points: row.get(19)?,
+            negative_points: row.get(20)?,
+            media_status: row.get(21)?,
+            external_url: row.get(22)?,
         })
     })?.collect::<Result<Vec<_>, _>>()?;
 
@@ -718,7 +722,8 @@ pub fn get_by_id(conn: &Connection, media_id: i64) -> Result<Option<MediaDetail>
          media.user_rating, media.user_review, media.progress_current,
          media.progress_total, media.progress_status, media.replay_count, media.experience_date, media.created_at, media.updated_at,
          COALESCE(media.cover_path, first_img.thumb_path) as cover_image,
-         media.cover_source_index, media.positive_points, media.negative_points, media.media_status
+         media.cover_source_index, media.backdrop_path, media.backdrop_source_index,
+         media.positive_points, media.negative_points, media.media_status, media.external_url
          FROM media
          LEFT JOIN media_images first_img ON first_img.id = (
            SELECT id FROM media_images WHERE media_id = media.id ORDER BY position ASC LIMIT 1
@@ -745,9 +750,12 @@ pub fn get_by_id(conn: &Connection, media_id: i64) -> Result<Option<MediaDetail>
             updated_at: row.get(14)?,
             cover_image: row.get(15)?,
             cover_source_index: row.get(16)?,
-            positive_points: row.get(17)?,
-            negative_points: row.get(18)?,
-            media_status: row.get(19)?,
+            backdrop_image: row.get(17)?,
+            backdrop_source_index: row.get(18)?,
+            positive_points: row.get(19)?,
+            negative_points: row.get(20)?,
+            media_status: row.get(21)?,
+            external_url: row.get(22)?,
         })
     }).optional()?;
 
@@ -768,8 +776,8 @@ pub fn insert(conn: &Connection, dto: CreateMediaDto) -> Result<i64> {
     conn.execute(
         "INSERT INTO media (collection_id, title, creator, release_date, synopsis,
          user_rating, user_review, progress_current,
-         progress_total, progress_status, replay_count, experience_date, positive_points, negative_points, media_status)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
+         progress_total, progress_status, replay_count, experience_date, positive_points, negative_points, media_status, external_url)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)",
         params![
             dto.collection_id,
             dto.title,
@@ -786,6 +794,7 @@ pub fn insert(conn: &Connection, dto: CreateMediaDto) -> Result<i64> {
             dto.positive_points,
             dto.negative_points,
             dto.media_status,
+            dto.external_url,
         ],
     )?;
     let media_id = conn.last_insert_rowid();
@@ -852,6 +861,11 @@ pub fn update(conn: &Connection, dto: UpdateMediaDto) -> Result<()> {
     if let Some(media_status) = dto.media_status {
         updates.push("media_status = ?");
         params.push(Box::new(media_status));
+    }
+    if let Some(external_url) = dto.external_url {
+        updates.push("external_url = ?");
+        let val: Option<String> = if external_url.trim().is_empty() { None } else { Some(external_url) };
+        params.push(Box::new(val));
     }
     if let Some(positive_points) = dto.positive_points {
         updates.push("positive_points = ?");
@@ -974,6 +988,28 @@ pub fn clear_cover_path(conn: &Connection, media_id: i64) -> Result<()> {
     Ok(())
 }
 
+pub fn set_backdrop_path(
+    conn: &Connection,
+    media_id: i64,
+    backdrop_path: &str,
+    backdrop_source_index: Option<i64>,
+) -> Result<()> {
+    conn.execute(
+        "UPDATE media SET backdrop_path = ?1, backdrop_source_index = ?2, updated_at = CURRENT_TIMESTAMP WHERE id = ?3",
+        params![backdrop_path, backdrop_source_index, media_id],
+    )?;
+    Ok(())
+}
+
+/// Clear backdrop path and source index
+pub fn clear_backdrop_path(conn: &Connection, media_id: i64) -> Result<()> {
+    conn.execute(
+        "UPDATE media SET backdrop_path = NULL, backdrop_source_index = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?1",
+        params![media_id],
+    )?;
+    Ok(())
+}
+
 /// Update positions of multiple images at once
 pub fn update_image_positions(conn: &mut Connection, updates: &[(i64, i32)]) -> Result<()> {
     let tx = conn.transaction()?;
@@ -1030,7 +1066,8 @@ pub fn get_similar_media(
                 m.replay_count, m.experience_date,
                 m.created_at, m.updated_at,
                 COALESCE(m.cover_path, first_img.thumb_path) as cover_image,
-                m.cover_source_index, m.positive_points, m.negative_points, m.media_status,
+                m.cover_source_index, m.backdrop_path, m.backdrop_source_index,
+                m.positive_points, m.negative_points, m.media_status, m.external_url,
                 COUNT(mg2.genre_id) as common_genre_count
          FROM media m
          LEFT JOIN media_images first_img ON first_img.id = (
@@ -1090,9 +1127,12 @@ fn map_media_row(row: &rusqlite::Row) -> rusqlite::Result<Media> {
         updated_at: row.get(14)?,
         cover_image: row.get(15)?,
         cover_source_index: row.get(16)?,
-        positive_points: row.get(17)?,
-        negative_points: row.get(18)?,
-        media_status: row.get(19)?,
+        backdrop_image: row.get(17)?,
+        backdrop_source_index: row.get(18)?,
+        positive_points: row.get(19)?,
+        negative_points: row.get(20)?,
+        media_status: row.get(21)?,
+        external_url: row.get(22)?,
     })
 }
 

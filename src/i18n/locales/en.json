@@ -459,6 +459,7 @@
     "duration": "Duration",
     "mediaStatus": "Media status",
     "cover": "Cover",
+    "backdrop": "Backdrop",
     "progressTotal": "Total",
     "replays": "Replays",
     "replayDates": "Replay dates",
@@ -480,6 +481,15 @@
     "myExperience": "My experience",
     "noReview": "No review written",
     "download": "Download",
+    "edit": "Edit",
+    "read": "Read",
+    "open": "Open",
+    "myList": "My list",
+    "share": "Share",
+    "director": "Director",
+    "release": "Release",
+    "averageRating": "Average rating",
+    "mainCast": "Main cast",
     "readMore": "Read more",
     "collapse": "Collapse",
     "lightboxHint": "Esc to exit · Double-click to zoom"
@@ -535,8 +545,24 @@
     "titleRequired": "Title is required",
     "searchViaApi": "Search via API",
     "synopsis": "Synopsis",
+    "webLink": "Web link",
     "crop": "Crop",
     "firstImageIsCover": "First image = cover",
+    "backdrop": "Backdrop",
+    "setAsBackdrop": "Set as backdrop",
+    "cropBackdrop": "Crop backdrop",
+    "cropBackdropTitle": "Crop backdrop image",
+    "backdropHint": "Pick an image as backdrop from the gallery",
+    "coverAndBackdrop": "Cover & Backdrop",
+    "coverLabel": "Cover",
+    "backdropLabel": "Backdrop",
+    "chooseSource": "Choose source",
+    "removeCover": "Remove cover",
+    "removeBackdrop": "Remove backdrop",
+    "noImagesHint": "Add images to the gallery first",
+    "coverRemovedHint": "No cover set",
+    "coverPreviewHint": "Cover preview",
+    "galleryHint": "Drag to reorder. Manage cover & backdrop below.",
     "uploadReading": "Reading…",
     "uploadProcessing": "Converting WebP…",
     "uploadSaving": "Saving…",
@@ -850,7 +876,9 @@
         "anime": "Anime",
         "manga": "Manga",
         "game": "Video Games",
-        "music": "Music"
+        "music": "Music",
+        "book": "Books",
+        "board_game": "Board Games"
       }
     }
   },
@@ -1304,10 +1332,6 @@
         "title": "The synopsis",
         "desc": "Write a description or summary. Markdown formatting is supported to structure your content."
       },
-      "mediaCover": {
-        "title": "Cover preview",
-        "desc": "This card previews the cover image. Images added in the Gallery section below serve as cover artwork."
-      },
       "mediaGenres": {
         "title": "Genres",
         "desc": "Assign genres to organize your media and refine recommendations for similar content."
@@ -1325,8 +1349,8 @@
         "desc": "Score your experience out of 100 and list positive and negative highlights."
       },
       "mediaGallery": {
-        "title": "Image gallery",
-        "desc": "Add up to 12 images per media via drag-and-drop or clipboard, then easily reorder them."
+        "title": "Image gallery & artwork",
+        "desc": "Add up to 12 images via drag-and-drop or clipboard, then reorder them. Below the grid, pick which image serves as the cover (2:3) and backdrop (16:9), crop/zoom each, or remove them entirely."
       },
       "mediaAttachments": {
         "title": "Attached files",
