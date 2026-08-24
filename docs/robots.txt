@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://cosmiir.github.io/Logia/sitemap.xml
