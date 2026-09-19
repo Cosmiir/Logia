@@ -5,6 +5,9 @@
 **Track everything you love.**  
 Catalog and manage your movies, series, anime, manga, games, books, music, and custom collections. Offline by default, with optional API enrichment.
 
+🌐 **[cosmiir.github.io/Logia](https://cosmiir.github.io/Logia/)**
+
+[![Website](https://img.shields.io/badge/Website-cosmiir.github.io%2FLogia-purple)](https://cosmiir.github.io/Logia/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/Cosmiir/logia?color=purple)](https://github.com/Cosmiir/logia/releases)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-blueviolet)](#installation)
