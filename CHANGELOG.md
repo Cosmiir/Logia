@@ -5,6 +5,22 @@ All notable changes to Logia will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-09-20
+
+### Added
+- **Spanish (Español) language support**: Logia is now available in three languages. Added a complete `es.json` locale, a Spanish option in the onboarding language step and the settings language selector (with ES flag), and Spanish keysets for the Gravity UI markdown editor (`gravityMarkdownEditorEs.ts`, registered via side-effect import like the French keysets). All locale-aware behavior now handles `es`: `getCurrentLocale()` returns `es-ES`, `getFirstDayOfWeek()` returns Monday for `es`, `CustomDatePicker` parses/displays `dd/mm/yyyy` for both `fr` and `es` (renamed internal `isFr` flag to `dayFirst`), Gravity UI/UIKit is configured with `lang: 'es'`, and notification/objective date formatting goes through `getCurrentLocale()` instead of inline `fr`/`en` checks.
+- **Recent Activity page**: new dedicated page (`recent-activity` route) listing all recent library activity — media added, started, in progress, completed, on hold, abandoned — grouped by time period (Today, Yesterday, This week, This month, Older) with per-status filters, collection filtering, search, and pagination (40 items/page). Reachable from the Dashboard's Recent Activity widget via "View all".
+- **Dashboard Hero Spotlight**: new full-width hero carousel on the Dashboard that spotlights media with backdrop images, with navigation arrows, auto-rotation (pauses on hover), rating/status badges, and quick actions. A settings modal lets users pick the spotlight mode (Best rated, Recent, In progress, Completed, All), restrict to specific collections, and optionally include media without backdrops. Preferences persist in `localStorage` (`logia_hero_prefs`, with migration from the legacy `logia_hero_spotlight_mode` key).
+- **Monthly Summary card**: new Dashboard widget summarizing the current month — media added this month, total library size, average rating with quality label/color coding, and per-status counts that navigate to the Library pre-filtered via the new `filterByProgressStatus` store action. Includes month-over-month trend indicators.
+- **Global quick-search shortcut (Ctrl+K / Cmd+K)**: pressing Ctrl+K (or Cmd+K on macOS) anywhere in the app navigates to the Library and focuses the search field. Ignored while typing in an input, textarea, or contenteditable element.
+- **`has_backdrop` media filter (backend)**: new optional `hasBackdrop` parameter on `get_all_media`/`get_media_by_collection` Tauri commands, threaded through `MediaFilters`/`build_filter_conditions` as a `m.backdrop_path IS NOT NULL AND != ''` SQL condition. Available via `mediaApi.getAll({ hasBackdrop })` on the frontend.
+- **Quick progress increment**: new "+1" quick action on in-progress media in the Dashboard's In Progress section — increments `progress_current` and auto-marks the media completed when it reaches `progress_total`.
+
+### Changed
+- **Dashboard refactor**: `Dashboard.tsx` was split into six dedicated components under `src/components/Dashboard/` — `DashboardHero`, `MonthlySummaryCard`, `DashboardInProgress`, `DashboardCollections`, `DashboardObjectiveWidget`, `DashboardRecentActivity` — backed by a new `useDashboardExtra.ts` hooks module (`useCollectionsMediaCounts`, `useRecentActivity`, `useAllMediaWithBackdrops`). The page now uses a 3-row responsive grid: Hero → (In Progress 2/3 + Recent Activity 1/3) → (Collections 2/3 + Objective widget 1/3). Context menu and delete confirmations are preserved.
+- **MediaCard flip behavior**: in "flip all" mode, individual cards can now be flipped back to the front via their close button (per-card opt-out) and rejoin the global flip via the "i" button; opt-out state resets when global flip is turned off. Clicking a card's back face now opens the media detail (same as the front face) — the close button is the only way to flip back.
+- **Landing page**: `docs/assets/dashboard.webp` re-encoded (~50% smaller, 228 KB → 116 KB) and `docs/robots.txt` added (allows all crawlers, references the sitemap).
+
 ## [1.1.0] - 2026-08-19
 
 ### Added

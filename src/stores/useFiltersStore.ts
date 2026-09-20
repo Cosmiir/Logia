@@ -130,6 +130,7 @@ interface FiltersState {
   updateFilter: (filterId: string, value: any) => void;
   clearAllFilters: () => void;
   filterByPerson: (personId: number) => void;
+  filterByProgressStatus: (status: string) => void;
 
   // Filter preset actions
   saveFilterPreset: (name: string) => void;
@@ -305,6 +306,19 @@ export const useFiltersStore = create<FiltersState>((set) => ({
       id: filterId,
       type: 'people',
       value: [personId],
+    };
+    return {
+      activeFilters: [newFilter],
+      searchQuery: '',
+    };
+  }),
+
+  filterByProgressStatus: (status) => set(() => {
+    const filterId = `filter-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const newFilter: FilterCriterion = {
+      id: filterId,
+      type: 'progress_status',
+      value: [status],
     };
     return {
       activeFilters: [newFilter],

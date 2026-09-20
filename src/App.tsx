@@ -37,6 +37,7 @@ const MediaDetail = lazy(() => import('./pages/MediaDetail'));
 const ObjectiveCreate = lazy(() => import('./pages/ObjectiveCreate'));
 const Import = lazy(() => import('./pages/Import'));
 const Export = lazy(() => import('./pages/Export'));
+const RecentActivity = lazy(() => import('./pages/RecentActivity'));
 
 const pageVariants = {
   initial: { opacity: 0 },
@@ -75,6 +76,7 @@ const pages: Record<string, React.FC> = {
   'objective-create': withSuspense(ObjectiveCreate),
   import: withSuspense(Import),
   export: withSuspense(Export),
+  'recent-activity': withSuspense(RecentActivity),
 };
 
 function App() {

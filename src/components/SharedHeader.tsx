@@ -68,6 +68,7 @@ const SharedHeader: React.FC<SharedHeaderProps> = ({ activePage, disableLayoutAn
   const navigate = useNavigationStore((s) => s.navigate);
   const navigateToMediaDetail = useNavigationStore((s) => s.navigateToMediaDetail);
   const navigateToObjectiveCreate = useNavigationStore((s) => s.navigateToObjectiveCreate);
+  const setFocusLibrarySearch = useNavigationStore((s) => s.setFocusLibrarySearch);
   const { data: activeProfile } = useActiveProfile();
   const { data: unreadCount } = useUnreadCount(activeProfile?.id ?? null);
   const { data: notifications = [] } = useNotifications(activeProfile?.id ?? null);
@@ -100,6 +101,23 @@ const SharedHeader: React.FC<SharedHeaderProps> = ({ activePage, disableLayoutAn
       document.removeEventListener('keydown', handleEscape);
     };
   }, []);
+
+  // Global Ctrl+K / Cmd+K listener for quick search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isInput = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+      if (isInput) return;
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setFocusLibrarySearch(true);
+        navigate('library');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [navigate, setFocusLibrarySearch]);
 
   const handleNotificationClick = (notification: Notification) => {
     if (!notification.is_read) {
@@ -145,6 +163,7 @@ const SharedHeader: React.FC<SharedHeaderProps> = ({ activePage, disableLayoutAn
       {/* Right side */}
       <div className="flex items-center gap-2 pr-[2px]">
         {rightSlot}
+
 
         {/* Notifications */}
         <div className="relative" ref={notificationDropdownRef}>

@@ -10,7 +10,7 @@ import UpdateModal from '@/components/UpdateModal';
 
 const AboutSection: React.FC = () => {
   const { t } = useTranslation();
-  const [appVersion, setAppVersion] = useState('1.0.0');
+  const [appVersion, setAppVersion] = useState('1.1.1');
   // Manual check (no auto-check on mount — App.tsx already does the launch check)
   const updateCheck = useUpdateCheck(false);
   const [manualModalOpen, setManualModalOpen] = useState(false);

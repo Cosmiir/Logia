@@ -20,7 +20,7 @@ const configureGravityUII18n = () => {
   const currentLanguage = localStorage.getItem('logia-language') || 'en';
   
   // Map React i18n language to Gravity UI language codes
-  const gravityUILanguage = currentLanguage === 'fr' ? 'fr' : 'en';
+  const gravityUILanguage = ['fr', 'es'].includes(currentLanguage) ? currentLanguage : 'en';
   
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   configureUIKit({ lang: gravityUILanguage as any });

@@ -30,7 +30,7 @@ const parseISODate = (str: string): string | null => {
   return null;
 };
 
-const parseLocaleDate = (str: string, isFr: boolean): string | null => {
+const parseLocaleDate = (str: string, dayFirst: boolean): string | null => {
   const parts = str.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
   if (!parts) return null;
 
@@ -38,8 +38,8 @@ const parseLocaleDate = (str: string, isFr: boolean): string | null => {
   const second = parseInt(parts[2], 10);
   const year = parseInt(parts[3], 10);
 
-  const day = isFr ? first : second;
-  const month = isFr ? second : first;
+  const day = dayFirst ? first : second;
+  const month = dayFirst ? second : first;
   const monthIndex = month - 1;
 
   const date = new Date(year, monthIndex, day);
@@ -54,9 +54,9 @@ const parseLocaleDate = (str: string, isFr: boolean): string | null => {
   return null;
 };
 
-const parseDateString = (str: string, isFr: boolean): string | null => {
+const parseDateString = (str: string, dayFirst: boolean): string | null => {
   const trimmed = str.trim();
-  return parseLocaleDate(trimmed, isFr) || parseISODate(trimmed);
+  return parseLocaleDate(trimmed, dayFirst) || parseISODate(trimmed);
 };
 
 const CustomDatePicker: React.FC<{
@@ -67,7 +67,7 @@ const CustomDatePicker: React.FC<{
   compact?: boolean;
 }> = ({ value, onChange, label, placeholder, compact = false }) => {
   const { t, i18n } = useTranslation();
-  const isFr = i18n.language === 'fr';
+  const dayFirst = ['fr', 'es'].includes(i18n.language);
   const firstDay = getFirstDayOfWeek();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -192,7 +192,7 @@ const CustomDatePicker: React.FC<{
       return;
     }
 
-    const parsedDate = parseDateString(cleaned, isFr);
+    const parsedDate = parseDateString(cleaned, dayFirst);
     if (parsedDate) {
       onChange(parsedDate);
     }
@@ -202,7 +202,7 @@ const CustomDatePicker: React.FC<{
     if (inputValue.trim() === '') {
       onChange('');
     } else {
-      const parsedDate = parseDateString(inputValue, isFr);
+      const parsedDate = parseDateString(inputValue, dayFirst);
       if (!parsedDate) {
         setInputValue(displayValue);
       }
@@ -212,7 +212,7 @@ const CustomDatePicker: React.FC<{
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      const parsedDate = parseDateString(inputValue, isFr);
+      const parsedDate = parseDateString(inputValue, dayFirst);
       if (parsedDate) {
         onChange(parsedDate);
         setIsOpen(false);

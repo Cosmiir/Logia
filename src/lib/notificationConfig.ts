@@ -2,6 +2,7 @@ import { Clock, Hourglass, CheckCircle2, AlertTriangle, CircleOff, Trophy, Calen
 import type { NotificationType, Notification } from '@/types';
 import type { ElementType } from 'react';
 import i18next from 'i18next';
+import { getCurrentLocale } from '@/lib/utils';
 
 export interface NotificationStyle {
   icon: ElementType;
@@ -79,7 +80,7 @@ export function formatDate(dateString: string): string {
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
-  const locale = i18next.language === 'fr' ? 'fr-FR' : 'en-US';
+  const locale = getCurrentLocale();
 
   if (diffMins < 1) return i18next.t('notifications.relativeTime.justNow');
   if (diffMins < 60) return i18next.t('notifications.relativeTime.minutesAgo', { count: diffMins });
@@ -167,7 +168,7 @@ export function formatDateLong(dateString: string): string {
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
-  const locale = i18next.language === 'fr' ? 'fr-FR' : 'en-US';
+  const locale = getCurrentLocale();
 
   if (diffMins < 1) return i18next.t('notifications.relativeTime.justNow');
   if (diffMins < 60) return i18next.t('notifications.relativeTime.minutesAgoFull', { count: diffMins });
