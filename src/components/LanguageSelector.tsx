@@ -12,6 +12,7 @@ interface LanguageSelectorProps {
 const languages = [
   { code: 'en', label: 'English', flag: 'GB' },
   { code: 'fr', label: 'Français', flag: 'FR' },
+  { code: 'es', label: 'Español', flag: 'ES' },
 ];
 
 function FlagIcon({ code, size = 18 }: { code: string; size?: number }) {

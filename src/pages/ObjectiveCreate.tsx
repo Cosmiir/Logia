@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import i18next from 'i18next';
 import {
   ArrowLeft,
   Target,
@@ -15,6 +14,7 @@ import SharedHeader from '@/components/SharedHeader';
 import CustomDatePicker from '@/components/CustomDatePicker';
 import { getCollectionIconComponent } from '@/components/CollectionIcons';
 import { useNavigationStore } from '@/stores/useNavigationStore';
+import { getCurrentLocale } from '@/lib/utils';
 import { useCollections } from '@/hooks/useCollections';
 import { useObjectives, useCreateObjective, useUpdateObjective } from '@/hooks/useObjectives';
 import type { Objective } from '@/types';
@@ -294,9 +294,9 @@ const ObjectiveCreate: React.FC = () => {
               <span className="text-white font-bold">{targetCount}</span>{' '}
               <span className="text-white font-semibold">{selectedCollection.name.toLowerCase()}</span>{' '}
               {t('objectiveCreate.previewFrom')}{' '}
-              <span className="text-white/90 font-medium">{new Date(startDate).toLocaleDateString(i18next.language === 'fr' ? 'fr-FR' : 'en-US')}</span>{' '}
+              <span className="text-white/90 font-medium">{new Date(startDate).toLocaleDateString(getCurrentLocale())}</span>{' '}
               {t('objectiveCreate.previewTo')}{' '}
-              <span className="text-white/90 font-medium">{new Date(endDate).toLocaleDateString(i18next.language === 'fr' ? 'fr-FR' : 'en-US')}</span>{' '}
+              <span className="text-white/90 font-medium">{new Date(endDate).toLocaleDateString(getCurrentLocale())}</span>{' '}
               {' — '}
               <span className="text-white/50">
                 {t('objectiveCreate.days', { count: Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)) })}

@@ -15,7 +15,8 @@ export type PageType =
   | 'template-management'
   | 'objective-create'
   | 'import'
-  | 'export';
+  | 'export'
+  | 'recent-activity';
 
 interface NavigationState {
   currentPage: PageType;
@@ -43,6 +44,7 @@ interface NavigationState {
   navigateToObjectiveCreate: (objectiveId?: number) => void;
   navigateToImport: () => void;
   navigateToExport: () => void;
+  navigateToRecentActivity: () => void;
   goBack: () => void;
   forceNavigate: (page: PageType) => void;
   setSelectedCollection: (id: number | null) => void;
@@ -150,6 +152,16 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
     if (beforeNavigate && !beforeNavigate()) return;
     set((state) => ({
       currentPage: 'export',
+      previousPage: state.currentPage,
+      beforeNavigate: null,
+    }));
+  },
+
+  navigateToRecentActivity: () => {
+    const { beforeNavigate } = get();
+    if (beforeNavigate && !beforeNavigate()) return;
+    set((state) => ({
+      currentPage: 'recent-activity',
       previousPage: state.currentPage,
       beforeNavigate: null,
     }));

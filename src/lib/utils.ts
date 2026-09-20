@@ -26,16 +26,20 @@ export function getProgressStatus(media: Media): ProgressStatus {
 /**
  * Get the current active BCP-47 locale
  */
-export function getCurrentLocale(): 'fr-FR' | 'en-US' {
-  return i18next.language === 'fr' ? 'fr-FR' : 'en-US';
+export function getCurrentLocale(): 'fr-FR' | 'en-US' | 'es-ES' {
+  switch (i18next.language) {
+    case 'fr': return 'fr-FR';
+    case 'es': return 'es-ES';
+    default: return 'en-US';
+  }
 }
 
 /**
  * Get the first day of the week for the current locale.
- * 0 = Sunday (en-US), 1 = Monday (fr-FR).
+ * 0 = Sunday (en-US), 1 = Monday (fr-FR, es-ES).
  */
 export function getFirstDayOfWeek(): 0 | 1 {
-  return i18next.language === 'fr' ? 1 : 0;
+  return ['fr', 'es'].includes(i18next.language) ? 1 : 0;
 }
 
 /**

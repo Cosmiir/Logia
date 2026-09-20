@@ -12,6 +12,7 @@ interface LanguageStepProps {
 const languages = [
   { code: 'en', label: 'English', flag: 'GB' },
   { code: 'fr', label: 'Français', flag: 'FR' },
+  { code: 'es', label: 'Español', flag: 'ES' },
 ];
 
 function FlagIcon({ code, size = 48 }: { code: string; size?: number }) {
@@ -43,7 +44,7 @@ const LanguageStep: React.FC<LanguageStepProps> = ({ onNext }) => {
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         {languages.map((lang) => (
           <button
             key={lang.code}

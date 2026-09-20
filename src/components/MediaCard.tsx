@@ -402,6 +402,10 @@ export const MediaCard: React.FC<MediaCardProps> = ({
   const cardDensity = rawCardDensity === 'detailed' ? 'normal' : rawCardDensity;
   // State for 3D flip details
   const [isFlipped, setIsFlipped] = useState(false);
+  // Opt-out local du flip global : permet à une carte de revenir face avant
+  // individuellement en mode flipAll (via le X), puis de réintégrer le flip
+  // global (via le bouton "i").
+  const [optedOut, setOptedOut] = useState(false);
   const [detail, setDetail] = useState<MediaDetail | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
@@ -449,11 +453,23 @@ export const MediaCard: React.FC<MediaCardProps> = ({
     }
   }, [flipAll, media.id, detail, loadingDetail]);
 
-  const showFlipped = flipAll || isFlipped;
+  // Quand on quitte le mode flip global, on reset l'opt-out pour repartir
+  // d'un état propre au prochain activation.
+  useEffect(() => {
+    if (!flipAll) setOptedOut(false);
+  }, [flipAll]);
+
+  const showFlipped = (flipAll && !optedOut) || isFlipped;
 
   const handleFlipClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
+    // En mode flip global, si la carte était opt-out, le bouton "i" la
+    // réintègre au flip global au lieu de basculer le flip local.
+    if (flipAll && optedOut) {
+      setOptedOut(false);
+      return;
+    }
     const newFlipped = !isFlipped;
     setIsFlipped(newFlipped);
 
@@ -475,7 +491,13 @@ export const MediaCard: React.FC<MediaCardProps> = ({
   const handleFlipBack = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    setIsFlipped(false);
+    if (flipAll) {
+      // Opt-out du flip global : seule cette carte revient face avant.
+      setOptedOut(true);
+      setIsFlipped(false);
+    } else {
+      setIsFlipped(false);
+    }
   };
 
   const handleMouseLeave = () => {
@@ -569,9 +591,13 @@ export const MediaCard: React.FC<MediaCardProps> = ({
         {/* ========================================== */}
         {/*  BACK FACE                                 */}
         {/* ========================================== */}
-        <div 
-          className="media-card-back w-full h-full relative text-left select-none"
-          onClick={handleFlipBack}
+        <div
+          className="media-card-back w-full h-full relative text-left select-none cursor-pointer"
+          onClick={(e) => {
+            // Un clic sur le dos ouvre le média (comme sur la face avant).
+            // Le bouton X (stopPropagation) reste le seul moyen de déflipper.
+            onClick?.(e);
+          }}
         >
           {/* Background: cover image blurred as wallpaper, or dark gradient */}
           {coverUrl ? (

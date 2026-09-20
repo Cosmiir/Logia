@@ -127,6 +127,7 @@ struct MediaFilterParams<'a> {
     progress_total_max: Option<f64>,
     progress_current_min: Option<f64>,
     progress_current_max: Option<f64>,
+    has_backdrop: Option<bool>,
 }
 
 impl<'a> MediaFilterParams<'a> {
@@ -162,6 +163,7 @@ impl<'a> MediaFilterParams<'a> {
             self.progress_total_max,
             self.progress_current_min,
             self.progress_current_max,
+            self.has_backdrop,
         )
     }
 
@@ -222,6 +224,7 @@ impl<'a> MediaFilterParams<'a> {
             self.progress_total_max,
             self.progress_current_min,
             self.progress_current_max,
+            self.has_backdrop,
         )
     }
 }
@@ -252,6 +255,7 @@ pub async fn get_media_by_collection(
     progress_total_max: Option<f64>,
     progress_current_min: Option<f64>,
     progress_current_max: Option<f64>,
+    has_backdrop: Option<bool>,
 ) -> Result<Vec<MediaListItem>, String> {
     let conn = state.db.lock().map_err(|e| e.to_string())?;
     let storage_dir = state.storage_dir.lock().map_err(|e| e.to_string())?;
@@ -277,6 +281,7 @@ pub async fn get_media_by_collection(
         progress_total_max,
         progress_current_min,
         progress_current_max,
+        has_backdrop,
     };
 
     let media = filters.query_media(&conn, Some(collection_id), &sort_criteria, limit, offset)
@@ -312,6 +317,7 @@ pub async fn get_all_media(
     progress_total_max: Option<f64>,
     progress_current_min: Option<f64>,
     progress_current_max: Option<f64>,
+    has_backdrop: Option<bool>,
 ) -> Result<Vec<MediaListItem>, String> {
     let conn = state.db.lock().map_err(|e| e.to_string())?;
     let storage_dir = state.storage_dir.lock().map_err(|e| e.to_string())?;
@@ -337,6 +343,7 @@ pub async fn get_all_media(
         progress_total_max,
         progress_current_min,
         progress_current_max,
+        has_backdrop,
     };
 
     let media = filters.query_media(&conn, None, &sort_criteria, limit, offset)
@@ -390,6 +397,7 @@ pub async fn count_all_media(
         progress_total_max,
         progress_current_min,
         progress_current_max,
+        has_backdrop: None,
     };
 
     let result = filters.count_media(&conn, None).map_err(|e| e.to_string())?;
@@ -440,6 +448,7 @@ pub async fn count_media_by_collection(
         progress_total_max,
         progress_current_min,
         progress_current_max,
+        has_backdrop: None,
     };
 
     let result = filters.count_media(&conn, Some(collection_id)).map_err(|e| e.to_string())?;
@@ -490,6 +499,7 @@ pub async fn get_all_media_ids(
         progress_total_max,
         progress_current_min,
         progress_current_max,
+        has_backdrop: None,
     };
     let ids = filters.query_media_ids(&conn, None, &sort_criteria).map_err(|e| e.to_string())?;
     Ok(ids)
@@ -540,6 +550,7 @@ pub async fn get_media_ids_by_collection(
         progress_total_max,
         progress_current_min,
         progress_current_max,
+        has_backdrop: None,
     };
     let ids = filters.query_media_ids(&conn, Some(collection_id), &sort_criteria).map_err(|e| e.to_string())?;
     Ok(ids)

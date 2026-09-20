@@ -133,6 +133,7 @@ export const mediaApi = {
     progressTotalMax?: number;
     progressCurrentMin?: number;
     progressCurrentMax?: number;
+    hasBackdrop?: boolean;
   }): Promise<Media[]> {
     const { sortCriteria, ...rest } = params ?? {};
     return invoke('get_all_media', {

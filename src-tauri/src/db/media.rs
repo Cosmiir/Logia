@@ -25,6 +25,7 @@ pub struct MediaFilters {
     pub progress_current_min: Option<f64>,
     pub progress_current_max: Option<f64>,
     pub use_fts: bool, // Use FTS5 for search instead of LIKE
+    pub has_backdrop: Option<bool>, // Filter media that have a backdrop image
 }
 
 /// Build WHERE conditions and params from filters
@@ -231,6 +232,13 @@ fn build_filter_conditions(
         params_vec.push(Box::new(max));
     }
 
+    // Has backdrop filter
+    if let Some(true) = filters.has_backdrop {
+        conditions.push("(m.backdrop_path IS NOT NULL AND m.backdrop_path != '')".to_string());
+    } else if let Some(false) = filters.has_backdrop {
+        conditions.push("(m.backdrop_path IS NULL OR m.backdrop_path = '')".to_string());
+    }
+
     (conditions, params_vec, has_genre_join)
 }
 
@@ -259,6 +267,7 @@ pub fn get_media(
     progress_total_max: Option<f64>,
     progress_current_min: Option<f64>,
     progress_current_max: Option<f64>,
+    has_backdrop: Option<bool>,
 ) -> Result<Vec<Media>> {
     // Check if we should use FTS5
     let fts_query: Option<String> = if let Some(query) = search_query {
@@ -291,6 +300,7 @@ pub fn get_media(
         progress_current_min,
         progress_current_max,
         use_fts: false,
+        has_backdrop,
     };
 
     // Build conditions with appropriate start index
@@ -405,6 +415,7 @@ pub fn get_media_ids(
     progress_total_max: Option<f64>,
     progress_current_min: Option<f64>,
     progress_current_max: Option<f64>,
+    has_backdrop: Option<bool>,
 ) -> Result<Vec<i64>> {
     let fts_query: Option<String> = if let Some(query) = search_query {
         if !query.is_empty() {
@@ -436,6 +447,7 @@ pub fn get_media_ids(
         progress_current_min,
         progress_current_max,
         use_fts: false,
+        has_backdrop,
     };
 
     let start_idx = if fts_query.is_some() { 2 } else { 1 };
@@ -576,6 +588,7 @@ pub fn count_media(
         progress_current_min,
         progress_current_max,
         use_fts: false,
+        has_backdrop: None,
     };
 
     let start_idx = if fts_query.is_some() { 2 } else { 1 };
@@ -665,6 +678,7 @@ pub fn get_distinct_creators(
         progress_current_min,
         progress_current_max,
         use_fts: false,
+        has_backdrop: None,
     };
 
     let start_idx = if fts_query.is_some() { 2 } else { 1 };

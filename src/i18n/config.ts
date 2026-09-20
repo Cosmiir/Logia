@@ -4,6 +4,7 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 
 import en from './locales/en.json';
 import fr from './locales/fr.json';
+import es from './locales/es.json';
 
 i18n
   .use(LanguageDetector)
@@ -12,6 +13,7 @@ i18n
     resources: {
       en: { translation: en },
       fr: { translation: fr },
+      es: { translation: es },
     },
     fallbackLng: 'en',
     interpolation: {
@@ -26,5 +28,5 @@ i18n
 
 export default i18n;
 
-export type SupportedLanguage = 'en' | 'fr';
-export const supportedLanguages: SupportedLanguage[] = ['en', 'fr'];
+export type SupportedLanguage = 'en' | 'fr' | 'es';
+export const supportedLanguages: SupportedLanguage[] = ['en', 'fr', 'es'];
